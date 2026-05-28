@@ -8,9 +8,12 @@ Supports PDF, DOCX, TXT.
 import streamlit as st
 import requests
 import time
-import os
+import sys
+from pathlib import Path
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_endpoint
 
 st.set_page_config(page_title="Upload Center | AI Governance", page_icon="📤", layout="wide")
 
@@ -181,7 +184,7 @@ if uploaded_file:
                 }
 
                 resp = requests.post(
-                    f"{API_BASE}/upload",
+                    get_api_endpoint("api/upload"),
                     files=files,
                     params=params,
                     timeout=30
@@ -241,7 +244,7 @@ if uploaded_file:
                 st.info("Tip: Use 'View Workflow Progress' to jump to the job and monitor ingestion stages.", icon="💡")
 
             except requests.exceptions.ConnectionError:
-                st.error("⚠️ Cannot connect to backend at localhost:8000. Is the server running?")
+                st.error("⚠️ Cannot connect to backend. Is the server running?")
             except requests.exceptions.HTTPError as e:
                 st.error(f"❌ Upload failed: {e.response.text}")
             except Exception as e:

@@ -8,9 +8,12 @@ and live audit log feed from the governance backend.
 import streamlit as st
 import requests
 import pandas as pd
-import os
+import sys
+from pathlib import Path
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_endpoint, make_api_request
 
 st.set_page_config(page_title="Dashboard | AI Governance", page_icon="📊", layout="wide")
 
@@ -38,11 +41,11 @@ def confidence_badge(score: float) -> str:
 
 def fetch_dashboard():
     try:
-        resp = requests.get(f"{API_BASE}/governance/dashboard/stats", timeout=10)
+        resp = requests.get(get_api_endpoint("api/governance/dashboard/stats"), timeout=10)
         resp.raise_for_status()
         return resp.json()
     except requests.exceptions.ConnectionError:
-        st.error("⚠️ Cannot connect to backend at localhost:8000. Is the server running?")
+        st.error("⚠️ Cannot connect to backend. Is the server running?")
         return None
     except Exception as e:
         st.error(f"Error fetching dashboard data: {e}")

@@ -9,9 +9,12 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime
-import os
+import sys
+from pathlib import Path
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_endpoint
 
 st.set_page_config(page_title="Workflow Tracker | AI Governance", page_icon="⚙️", layout="wide")
 
@@ -63,11 +66,11 @@ st.markdown("### 🧾 Recent Processed Reports (used as workflow jobs)")
 # Use existing backend reports endpoint (no backend changes required)
 jobs = []
 try:
-    resp = requests.get(f"{API_BASE}/governance/reports", params={"is_latest": True}, timeout=10)
+    resp = requests.get(get_api_endpoint("api/governance/reports"), params={"is_latest": True}, timeout=10)
     resp.raise_for_status()
     jobs = resp.json()
 except requests.exceptions.ConnectionError:
-    st.error("⚠️ Cannot connect to backend at localhost:8000. Is the server running?")
+    st.error("⚠️ Cannot connect to backend. Is the server running?")
 except Exception:
     jobs = []
 
@@ -128,7 +131,7 @@ if selected_report_id:
 
     # Fetch latest report detail
     try:
-        resp = requests.get(f"{API_BASE}/governance/reports/{selected_report_id}", timeout=8)
+        resp = requests.get(get_api_endpoint(f"api/governance/reports/{selected_report_id}"), timeout=8)
         if resp.status_code == 200:
             selected_report = resp.json()
             st.session_state["selected_report_obj"] = selected_report
@@ -219,7 +222,7 @@ if selected_report_id:
         with a1:
             if st.button("Refresh Report", key=f"refresh_report_{selected_report_id}"):
                 try:
-                    resp = requests.get(f"{API_BASE}/governance/reports/{selected_report_id}", timeout=8)
+                    resp = requests.get(get_api_endpoint(f"api/governance/reports/{selected_report_id}"), timeout=8)
                     resp.raise_for_status()
                     st.session_state["selected_report_obj"] = resp.json()
                     st.experimental_rerun()

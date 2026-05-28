@@ -6,9 +6,12 @@ View open escalations and route them to target stakeholders.
 
 import streamlit as st
 import requests
-import os
+import sys
+from pathlib import Path
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_endpoint
 
 st.set_page_config(page_title="Escalations | AI Governance", page_icon="🚨", layout="wide")
 
@@ -43,7 +46,7 @@ try:
     if esc_status_filter != "All":
         params["status"] = esc_status_filter
 
-    resp = requests.get(f"{API_BASE}/governance/escalations", params=params, timeout=10)
+    resp = requests.get(get_api_endpoint("api/governance/escalations"), params=params, timeout=10)
     resp.raise_for_status()
     escalations = resp.json()
 except requests.exceptions.ConnectionError:
@@ -116,7 +119,7 @@ else:
                     else:
                         try:
                             resp = requests.post(
-                                f"{API_BASE}/governance/escalations/{esc['id']}/route",
+                                get_api_endpoint(f"api/governance/escalations/{esc['id']}/route"),
                                 json={"routing_target": routing_target.strip()},
                                 timeout=10
                             )

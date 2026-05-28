@@ -7,9 +7,12 @@ or request changes, and add review notes.
 
 import streamlit as st
 import requests
-import os
+import sys
+from pathlib import Path
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_endpoint
 
 st.set_page_config(page_title="Review Queue | AI Governance", page_icon="✅", layout="wide")
 
@@ -43,7 +46,7 @@ with col_r:
 
 try:
     resp = requests.get(
-        f"{API_BASE}/governance/reports",
+        get_api_endpoint("api/governance/reports"),
         params={"is_latest": True, "review_status": "pending_review"},
         timeout=10
     )
@@ -164,7 +167,7 @@ else:
                             "review_notes": review_notes
                         }
                         resp = requests.patch(
-                            f"{API_BASE}/governance/reports/{report['id']}/review",
+                            get_api_endpoint(f"api/governance/reports/{report['id']}/review"),
                             json=payload,
                             timeout=10
                         )
