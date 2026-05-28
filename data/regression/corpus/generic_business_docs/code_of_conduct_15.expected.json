@@ -1,0 +1,9 @@
+{
+  "document_type": "generic_business_document",
+  "governance_relevance": "low",
+  "raid_items_min": 0,
+  "escalations_max": 0,
+  "meeting_actions_min": 0,
+  "filename": "code_of_conduct_15.pdf",
+  "format": "pdf"
+}

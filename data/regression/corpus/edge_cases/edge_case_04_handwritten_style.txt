@@ -1,0 +1,27 @@
+Meeting Notes - May 27 2026
+------------------------------
+
+Team meeting today. Sarah Mitchell led discussion.
+
+Sprint 1 done. Good progress. John Smith says API layer 90% done.
+
+Lisa Wang presented architecture. Looks good. Michael Chen joined at 9:30. He liked it. Suggested small changes to DR plan. Team agreed.
+
+Need more QA for Sprint 2. Sarah to request contractor. Start June 1.
+
+Milestones:
+- Sprint 1 done today
+- Sprint 2 starts May 30
+- Architecture sign-off June 2
+- Demo June 10
+
+Actions:
+1. John - API docs by May 30
+2. Sarah - Schedule demo by June 5
+3. Lisa - DR plan changes by June 1
+4. Sarah - QA contractor request by May 28
+5. David - Accessibility session by June 3
+
+Next meeting June 3. Same time.
+
+Signed: Sarah Mitchell

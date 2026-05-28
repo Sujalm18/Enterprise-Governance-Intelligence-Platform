@@ -1,0 +1,13 @@
+flowchart TB
+    S[Section Context] --> O[Ontology Entity]
+    O --> R[Risk]
+    O --> I[Issue]
+    O --> D[Decision]
+    O --> A[Approval]
+    O --> X[ActionItem]
+    R --> RAID[Legacy RAID API]
+    I --> RAID
+    X --> RAID
+    D --> Reasoning[Reasoning and Summary]
+    A --> Reasoning
+

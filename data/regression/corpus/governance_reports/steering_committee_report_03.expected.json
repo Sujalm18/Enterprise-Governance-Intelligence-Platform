@@ -1,0 +1,9 @@
+{
+  "document_type": "governance_report",
+  "governance_relevance": "high",
+  "raid_items_min": 3,
+  "escalations_max": 3,
+  "meeting_actions_min": 5,
+  "filename": "steering_committee_report_03.pdf",
+  "format": "pdf"
+}

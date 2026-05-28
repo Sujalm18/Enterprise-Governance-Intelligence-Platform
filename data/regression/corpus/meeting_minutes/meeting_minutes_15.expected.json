@@ -1,0 +1,9 @@
+{
+  "document_type": "meeting_minutes",
+  "governance_relevance": "low",
+  "raid_items_min": 0,
+  "escalations_max": 0,
+  "meeting_actions_min": 5,
+  "filename": "meeting_minutes_15.txt",
+  "format": "txt"
+}

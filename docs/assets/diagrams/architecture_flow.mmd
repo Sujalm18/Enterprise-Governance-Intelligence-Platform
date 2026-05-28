@@ -1,0 +1,10 @@
+flowchart LR
+    A[Document Upload] --> B[Mixed Format Ingestion]
+    B --> C[OCR Quality Gate]
+    C --> D[Document Classification]
+    D --> E[Governance Ontology Reconstruction]
+    E --> F[Semantic Filtering and Deduplication]
+    F --> G[Executive Summary and API Response]
+    G --> H[Streamlit Governance Review UI]
+    F --> I[Regression Evaluation]
+

@@ -1,0 +1,310 @@
+RAID REGISTER
+=============
+
+Project: SAP S/4HANA Implementation
+Project ID: SAP-2024-205
+Last Updated: May 27, 2026
+Owner: Thomas Anderson, ERP Program Director
+
+RISKS
+-----
+
+Risk ID: R-001
+Title: Data quality issues preventing successful migration
+Description: Legacy system data contains significant quality issues that are preventing successful migration to SAP.
+Category: Data
+Impact: Critical (Migration failure, go-live risk)
+Probability: High (75%)
+Risk Score: 37
+Status: Critical
+Owner: Data Migration Team
+Date Identified: May 5, 2026
+Date Reviewed: May 27, 2026
+Mitigation Actions:
+- Enhanced data cleansing initiated (May 6)
+- Legacy system data fixes started (May 7)
+- Manual intervention planning (May 8)
+- External data consultants engaged (May 9)
+Contingency Plan: Extended timeline, manual data entry, go-live delay
+Due Date: June 15, 2026
+
+Risk ID: R-002
+Title: Business users not adequately trained for go-live
+Description: Business users may not be adequately trained by go-live date due to timeline constraints.
+Category: Organizational Change
+Impact: High (Adoption failure, operational disruption)
+Probability: High (70%)
+Risk Score: 35
+Status: Critical
+Owner: Change Management Team
+Date Identified: May 10, 2026
+Date Reviewed: May 27, 2026
+Mitigation Actions:
+- Training acceleration initiated (May 11)
+- Super user expansion started (May 12)
+- Just-in-time training planned (May 13)
+- Executive sponsorship increased (May 14)
+Contingency Plan: Go-live delay, intensive post-go-live support
+Due Date: June 30, 2026
+
+Risk ID: R-003
+Title: Key business processes not fully redesigned for SAP capabilities
+Description: Key business processes have not been fully redesigned to leverage SAP capabilities, potentially limiting benefits.
+Category: Business Process
+Impact: High (Limited benefits, adoption issues)
+Probability: Medium (50%)
+Risk Score: 25
+Status: Active
+Owner: Business Process Team
+Date Identified: May 15, 2026
+Date Reviewed: May 27, 2026
+Mitigation Actions:
+- Process workshops accelerated (May 16)
+- SAP best practice adoption increased (May 17)
+- Process owner engagement intensified (May 18)
+- Redesign timeline extended (May 19)
+Contingency Plan: Phased process redesign, post-go-live optimization
+Due Date: July 15, 2026
+
+Risk ID: R-004
+Title: Integration with non-SAP systems not fully tested
+Description: Integration with non-SAP systems may not be fully tested before go-live due to timeline constraints.
+Category: Technical
+Impact: High (Integration failures, operational disruption)
+Probability: Medium (45%)
+Risk Score: 27
+Status: Active
+Owner: Integration Team
+Date Identified: May 18, 2026
+Date Reviewed: May 27, 2026
+Mitigation Actions:
+- Extended testing period requested (May 19)
+- End-to-end scenario testing prioritized (May 20)
+- SAP support engaged (May 21)
+- Integration testing environment expanded (May 22)
+Contingency Plan: Post-go-live integration fixes, temporary workarounds
+Due Date: July 15, 2026
+
+Risk ID: R-005
+Title: Budget overrun due to scope expansion and delays
+Description: Project budget may overrun due to scope expansion and delays caused by data quality and training issues.
+Category: Financial
+Impact: Medium (Budget overrun)
+Probability: Medium (55%)
+Risk Score: 22
+Status: Monitoring
+Owner: Thomas Anderson, Program Director
+Date Identified: May 20, 2026
+Date Reviewed: May 27, 2026
+Mitigation Actions:
+- Cost monitoring implemented (May 21)
+- Scope change control tightened (May 22)
+- Contingency budget tracking (May 23)
+- Cost optimization initiatives (May 24)
+Contingency Plan: Budget augmentation request, scope reduction
+Due Date: July 30, 2026
+
+ISSUES
+-----
+
+Issue ID: I-001
+Title: General Ledger historical data contains inconsistencies
+Description: General Ledger historical data contains significant inconsistencies blocking migration.
+Category: Data
+Severity: Critical
+Status: Manual correction in progress
+Owner: Finance Team
+Date Raised: May 15, 2026
+Date Reviewed: May 27, 2026
+Impact: Migration delayed, go-live at risk
+Root Cause: Poor data governance in legacy systems, lack of validation rules
+Resolution Actions:
+- Finance team working weekends (May 16)
+- External data consultants engaged (May 17)
+- Correction framework developed (May 18)
+- Progress monitoring daily (May 19)
+Target Resolution: June 5, 2026
+Assigned To: Finance Team
+
+Issue ID: I-002
+Title: Business stakeholders resisting process changes
+Description: Business stakeholders are resisting required process changes for SAP implementation.
+Category: Organizational Change
+Severity: High
+Status: Executive sponsorship engaged
+Owner: William Harrison, Sponsor
+Date Raised: May 18, 2026
+Date Reviewed: May 27, 2026
+Impact: Process redesign stalled, training adoption at risk
+Root Cause: Change resistance, lack of understanding, competing priorities
+Resolution Actions:
+- CEO communication planned (May 19)
+- Mandatory process adoption enforced (May 20)
+- Stakeholder engagement intensified (May 21)
+- Benefits communication reinforced (May 22)
+Target Resolution: June 10, 2026
+Assigned To: William Harrison, Sponsor
+
+Issue ID: I-003
+Title: Integration testing revealing performance issues
+Description: Integration testing is revealing performance issues with high-volume transactions.
+Category: Technical
+Severity: Medium
+Status: Performance tuning in progress
+Owner: Technical Team
+Date Raised: May 20, 2026
+Date Reviewed: May 27, 2026
+Impact: System performance concerns for peak periods
+Root Cause: Configuration issues, hardware sizing, data volume
+Resolution Actions:
+- SAP support engaged (May 20)
+- Performance tuning initiated (May 21)
+- Hardware scaling options evaluated (May 22)
+- Alternative configurations tested (May 23)
+Target Resolution: June 15, 2026
+Assigned To: Technical Team, SAP Support
+
+Issue ID: I-004
+Title: User training completion behind schedule
+Description: User training completion is behind schedule with only 40% complete vs. target of 100% by June 30.
+Category: Organizational Change
+Severity: High
+Status: Acceleration in progress
+Owner: Change Management Team
+Date Raised: May 22, 2026
+Date Reviewed: May 27, 2026
+Impact: Users not ready for go-live, adoption risk
+Root Cause: Timeline constraints, resource availability, competing priorities
+Resolution Actions:
+- Training acceleration authorized (May 22)
+- Additional trainers allocated (May 23)
+- Training schedule compressed (May 24)
+- Just-in-time training planned (May 25)
+Target Resolution: June 25, 2026
+Assigned To: Change Management Team
+
+ACTIONS
+-----
+
+Action ID: A-001
+Title: Complete GL data correction and validation
+Description: Complete General Ledger data correction and validation for migration.
+Category: Data
+Priority: Critical
+Status: In Progress
+Owner: Finance Team
+Date Created: May 16, 2026
+Due Date: June 5, 2026
+Progress: 50% complete
+
+Action ID: A-002
+Title: Accelerate user training program completion
+Description: Accelerate user training program completion to ensure readiness for go-live.
+Category: Change Management
+Priority: Critical
+Status: In Progress
+Owner: Change Management Team
+Date Created: May 22, 2026
+Due Date: June 20, 2026
+Progress: 30% complete
+
+Action ID: A-003
+Title: Execute CEO communication on process change mandate
+Description: Execute CEO communication mandating business process change adoption.
+Category: Communication
+Priority: High
+Status: Scheduled
+Owner: William Harrison, Sponsor
+Date Created: May 24, 2026
+Due Date: May 30, 2026
+Progress: Communication prepared
+
+Action ID: A-004
+Title: Complete end-to-end integration testing
+Description: Complete comprehensive end-to-end integration testing for all critical scenarios.
+Category: Technical
+Priority: High
+Status: In Progress
+Owner: Integration Team
+Date Created: May 25, 2026
+Due Date: June 15, 2026
+Progress: 40% complete
+
+Action ID: A-005
+Title: Finalize go-live readiness assessment
+Description: Finalize comprehensive go-live readiness assessment for go/no-go decision.
+Category: Decision Making
+Priority: Critical
+Status: Pending
+Owner: Thomas Anderson, Program Director
+Date Created: May 26, 2026
+Due Date: June 25, 2026
+Progress: 0% complete
+
+DEPENDENCIES
+-----
+
+Dependency ID: D-001
+Title: SAP Support
+Description: SAP support must be available for critical issues and performance tuning.
+Type: External
+Status: Engaged
+Critical: Yes
+Owner: Technical Team
+Target Date: Ongoing
+Actual Date: Engaged
+
+Dependency ID: D-002
+Title: Finance Team Data Correction
+Description: Finance Team must complete data correction for GL migration.
+Type: Internal
+Status: Critical Path
+Critical: Yes
+Owner: William Harrison, Sponsor
+Target Date: June 5, 2026
+Actual Date: In Progress
+
+Dependency ID: D-003
+Title: Business User Training
+Description: Business users must complete training before go-live.
+Type: Internal
+Status: Critical Path
+Critical: Yes
+Owner: Change Management Team
+Target Date: June 25, 2026
+Actual Date: Acceleration in progress
+
+DECISIONS
+-----
+
+Decision ID: DEC-001
+Title: Weekend work authorization for data correction
+Description: Authorized weekend work for Finance Team to accelerate data correction.
+Date: May 23, 2026
+Decision Maker: William Harrison, Sponsor
+Impact: Accelerated data correction, additional cost
+Rationale: Data correction is critical path for go-live
+
+Decision ID: DEC-002
+Title: Training program acceleration budget approval
+Description: Approved budget for training program acceleration including additional trainers and compressed schedule.
+Date: May 24, 2026
+Decision Maker: William Harrison, Sponsor
+Impact: Training acceleration, additional budget
+Rationale: User readiness critical for successful go-live
+
+Decision ID: DEC-003
+Title: Go-live date contingent on readiness
+Description: Approved go-live date of July 15, 2026 contingent on successful readiness assessment.
+Date: May 25, 2026
+Decision Maker: William Harrison, Sponsor
+Impact: Go-live planning, readiness focus
+Rationale: Quality and readiness take priority over timeline
+
+SUMMARY
+-------
+Total Risks: 5 (0 Mitigated, 1 Monitoring, 4 Active)
+Total Issues: 4 (2 Open, 2 In Progress, 1 Escalated)
+Total Actions: 5 (3 In Progress, 1 Scheduled, 1 Pending)
+Total Dependencies: 3 (1 Engaged, 2 Critical Path)
+Total Decisions: 3

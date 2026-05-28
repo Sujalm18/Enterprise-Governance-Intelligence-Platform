@@ -1,0 +1,9 @@
+{
+  "document_type": "project_status_report",
+  "governance_relevance": "high",
+  "raid_items_min": 2,
+  "escalations_max": 2,
+  "meeting_actions_min": 3,
+  "filename": "project_status_report_07_uat_issues.docx",
+  "format": "docx"
+}

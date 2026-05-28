@@ -1,0 +1,9 @@
+{
+  "document_type": "escalation_memo",
+  "governance_relevance": "high",
+  "raid_items_min": 2,
+  "escalations_max": 1,
+  "meeting_actions_min": 4,
+  "filename": "escalation_memo_02.pdf",
+  "format": "scanned_pdf"
+}

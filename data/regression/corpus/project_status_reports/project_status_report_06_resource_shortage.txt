@@ -1,0 +1,120 @@
+PROJECT STATUS REPORT
+=====================
+
+Project Name: Mobile Banking App Redesign
+Project ID: MBA-2024-078
+Report Date: May 27, 2026
+Reporting Period: May 20 - May 27, 2026
+Prepared By: Christopher Lee, Project Manager
+Sponsor: Michelle Davis, Head of Digital Banking
+
+EXECUTIVE SUMMARY
+-----------------
+The Mobile Banking App Redesign project is experiencing significant resource constraints that are impacting delivery timeline. Critical skill shortages in UX design and mobile security have created bottlenecks. While the project vision and requirements are clear, the inability to secure required resources is causing schedule slippage. Resource augmentation requests have been submitted but approval is pending. The project remains within budget but timeline is at risk.
+
+OVERALL STATUS: AMBER
+
+PROJECT METRICS
+---------------
+- Schedule Variance: -20% (Behind schedule)
+- Cost Variance: -5% (Under budget)
+- Scope Variance: 0% (No changes)
+- Quality Index: 90% (Good)
+- Resource Utilization: 75% (Under-utilized due to skill gaps)
+
+MILESTONE PROGRESS
+------------------
+✓ User Research & Personas - COMPLETED (April 15)
+✓ Information Architecture - COMPLETED (May 5)
+⚠ UX/UI Design - DELAYED (Resource shortage, 40% complete)
+⚠ Security Architecture - DELAYED (Security specialist unavailable, 30% complete)
+○ Frontend Development - BLOCKED (Awaiting design completion)
+○ Backend Integration - BLOCKED (Awaiting security architecture)
+○ Security Testing - NOT STARTED
+○ Beta Launch - RESCHEDULED (August 15)
+○ Full Launch - RESCHEDULED (September 30)
+
+RESOURCE STATUS
+---------------
+Required Resources: 12 FTE
+Currently Allocated: 8 FTE
+Gap: 4 FTE (33% shortage)
+Critical Gaps:
+- Senior UX Designer: 0 of 2 required
+- Mobile Security Specialist: 0 of 1 required
+- iOS Developer: 1 of 2 required
+- QA Automation Engineer: 0 of 1 required
+
+RISKS
+-----
+1. Risk: Critical skill shortages preventing project progress
+   Impact: High | Probability: Certain
+   Status: Critical
+   Owner: Christopher Lee, Project Manager
+   Mitigation: Resource augmentation request submitted, contractor engagement initiated
+
+2. Risk: Competitor may launch similar features first
+   Impact: High | Probability: Medium
+   Status: Active
+   Owner: Michelle Davis, Sponsor
+   Mitigation: Accelerated timeline requested if resources secured
+
+3. Risk: Team morale declining due to resource constraints
+   Impact: Medium | Probability: Medium
+   Status: Monitoring
+   Owner: Christopher Lee, Project Manager
+   Mitigation: Regular team communication, recognition programs maintained
+
+ISSUES
+------
+1. Issue: Unable to secure senior UX designer from internal resource pool
+   Severity: Critical
+   Status: Escalated to HR Director
+   Owner: Christopher Lee
+   Impact: Design phase stalled, blocking development
+   Resolution: External contractor engagement approved, onboarding in progress
+
+2. Issue: Mobile security specialist allocated to another priority project
+   Severity: Critical
+   Status: Escalated to CTO
+   Owner: Christopher Lee
+   Impact: Security architecture cannot be completed
+   Resolution: Resource reallocation request submitted, awaiting decision
+
+3. Issue: iOS developer position vacant for 6 weeks
+   Severity: High
+   Status: HR recruitment active
+   Owner: HR Department
+   Impact: iOS development lagging behind Android
+   Resolution: Contractor engaged as interim solution
+
+ACTIONS
+-------
+1. Finalize senior UX designer contractor onboarding - HR Team (Due: May 30, Priority: Critical)
+2. Secure CTO decision on security specialist reallocation - Christopher Lee (Due: May 29, Priority: Critical)
+3. Submit accelerated hiring request for iOS developer - HR Team (Due: June 1, Priority: High)
+4. Develop resource-constrained timeline alternative - Christopher Lee (Due: June 3, Priority: Medium)
+
+DEPENDENCIES
+------------
+- Internal: Senior UX Designer allocation - CRITICAL
+- Internal: Mobile Security Specialist allocation - CRITICAL
+- Internal: iOS Developer hiring - HIGH PRIORITY
+- External: Contractor availability - On track
+
+DECISIONS MADE
+-------------
+- Approved external contractor engagement for UX design (May 23)
+- Authorized emergency hiring process for critical positions (May 25)
+- Approved budget for contractor premium rates (May 26)
+
+RECOMMENDATIONS
+---------------
+1. Immediate CTO intervention required for security specialist allocation
+2. Consider reducing scope to match available resources
+3. Evaluate offshore development team augmentation
+4. Implement resource governance improvements for future projects
+
+RESOURCE ESCALATION: Yes - Critical resource gaps require HR Director and CTO attention
+
+NEXT REPORT DATE: June 3, 2026

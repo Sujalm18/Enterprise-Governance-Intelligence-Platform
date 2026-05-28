@@ -1,0 +1,9 @@
+{
+  "document_type": "noisy_ocr_document",
+  "governance_relevance": "medium",
+  "raid_items_min": 0,
+  "escalations_max": 1,
+  "meeting_actions_min": 0,
+  "filename": "noisy_ocr_03.pdf",
+  "format": "pdf"
+}

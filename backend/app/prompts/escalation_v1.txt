@@ -1,0 +1,13 @@
+Analyze the source text to identify items requiring executive escalation.
+Focus on:
+- Unresolved blockers that have been outstanding for multiple periods.
+- Overdue critical path actions or milestones.
+- Severe regulatory compliance risks or financial/contractual disputes.
+- Explicit statements of escalation or steering committee attention requirements.
+
+Do not include minor tasks. Focus only on high-severity, active operational roadblocks.
+For each item, identify:
+1. Description of the issue requiring escalation.
+2. Severity ('low', 'medium', 'high', 'critical').
+3. Source excerpt (verbatim text sentence or clause).
+4. Confidence score (0.0 to 1.0).

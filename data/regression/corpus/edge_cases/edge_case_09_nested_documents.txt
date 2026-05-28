@@ -1,0 +1,67 @@
+PROJECT PORTFOLIO REPORT
+======================
+
+Report Date: May 27, 2026
+Prepared By: Project Management Office
+
+[EMBEDDED DOCUMENT 1: PROJECT STATUS REPORT]
+============================================
+
+Project Name: Digital Transformation Initiative - Phase 1
+Project ID: DTI-2024-001
+Report Date: May 27, 2026
+Status: GREEN
+
+Executive Summary: The Digital Transformation Initiative Phase 1 is on track for successful delivery. All key milestones achieved on schedule.
+
+Key Metrics:
+- Schedule Variance: +0%
+- Cost Variance: -2%
+- Quality Index: 98%
+
+[END EMBEDDED DOCUMENT 1]
+
+[EMBEDDED DOCUMENT 2: RAID REGISTER]
+====================================
+
+Project: Digital Transformation Initiative - Phase 1
+Date: May 27, 2026
+
+Risks:
+R-001: Third-party API integration complexity (Mitigated)
+R-002: Data migration volume underestimation (Monitoring)
+
+Actions:
+A-001: Complete API documentation review (Due: May 30)
+A-002: Finalize security assessment report (Due: June 1)
+
+[END EMBEDDED DOCUMENT 2]
+
+[EMBEDDED DOCUMENT 3: MEETING MINUTES]
+======================================
+
+Meeting: Weekly Project Team Meeting
+Date: May 27, 2026
+Attendees: Sarah Mitchell, John Smith, Lisa Wang, Michael Chen
+
+Key Decisions:
+- Approved additional QA contractor for Sprint 2
+- Confirmed architecture design approval
+
+Action Items:
+- Schedule stakeholder demo session
+- Incorporate disaster recovery plan adjustments
+
+[END EMBEDDED DOCUMENT 3]
+
+PORTFOLIO SUMMARY
+================
+
+Total Projects in Portfolio: 15
+Projects On Track: 12
+Projects At Risk: 2
+Projects Blocked: 1
+
+Overall Portfolio Health: 87% GREEN
+
+[END PORTFOLIO REPORT]

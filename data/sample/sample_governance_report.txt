@@ -1,0 +1,22 @@
+PROJECT GOVERNANCE REVIEW: PROJECT HELIOS CLOUD MIGRATION
+Status: RED
+Phase: Assessment & Planning
+Budget Variance: $120,000 overrun due to unexpected storage egress costs and extended VM provisioning.
+Assessment Date: 2026-05-20
+Reviewer: Lead PMO Analyst
+
+1. OVERVIEW
+Project Helios is the migration of legacy financial core systems to the AWS cloud. The project is currently experiencing severe headwinds due to vendor staffing issues and unbudgeted cloud infrastructure expenses.
+
+2. DETAILED STATUS & ISSUES
+- BUDGET OVERRUN: The project has incurred an unexpected $120,000 cost overrun. This is driven by legacy systems transmitting redundant test data payloads, resulting in high network egress charges.
+- VENDOR STAFFING DEVIATION: Vendor did not allocate certified cloud migration engineers as specified in the Master Services Agreement (MSA). This staffing gap has led to a 2-week slip in the migration architecture sign-off.
+- DATA SECURITY GAP: The compliance team has raised a concern that PII data encryption keys are currently managed under a shared service account rather than dedicated IAM roles.
+
+3. ESCALATION ROUTING
+- ESCALATION: We request contract penalty clause enforcement due to the vendor's failure to supply certified engineers. This breach must be resolved immediately. Routing Target: PMO Lead.
+- ESCALATION: Approval required for an additional budget allocation of $50,000 to cover transit gateways and network traffic logging. Routing Target: Steering Committee.
+
+4. NEXT STEPS
+- Implement traffic filtering to reduce network egress costs by May 28.
+- Finalize IAM separation of duties by June 5.

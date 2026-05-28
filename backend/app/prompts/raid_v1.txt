@@ -1,0 +1,12 @@
+Analyze the text to identify RAID items:
+- Risks: Future potential events that may negatively impact the project.
+- Actions: Assigned tasks with specific owners and/or deadlines.
+- Issues: Current active problems that need immediate attention.
+- Dependencies: Internal/external factors or items the project requires from other parties to proceed.
+
+For each item, identify:
+1. Type (must be exactly 'risk', 'action', 'issue', or 'dependency')
+2. Description
+3. Severity (must be exactly 'low', 'medium', 'high', or 'critical')
+4. Source excerpt (verbatim text sentence or clause from the source document)
+5. A local confidence score between 0.0 and 1.0 based on how explicit the item is.
