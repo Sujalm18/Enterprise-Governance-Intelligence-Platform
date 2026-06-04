@@ -133,6 +133,177 @@ Deployment docs:
 - [Deployment guide](docs/deployment/deployment.md)
 - [Deployment checklist](docs/deployment/deployment_checklist.md)
 
+## Cloud Deployment: Streamlit + Render
+
+Deploy the frontend to Streamlit Cloud and backend to Render with environment-based API configuration:
+
+### Architecture
+
+```
+┌─────────────────┐                    ┌──────────────────┐
+│ Streamlit Cloud │ ────── API ─────→  │  Render Backend  │
+│   (Frontend)    │   (HTTPS/REST)     │   (FastAPI)      │
+└─────────────────┘                    └──────────────────┘
+```
+
+### Prerequisites
+
+- **GitHub repository** with code committed
+- **Streamlit Cloud account** (free at https://share.streamlit.io)
+- **Render account** (free at https://render.com)
+- Backend Docker image or code for Render deployment
+
+### Backend Deployment (Render)
+
+1. **Create a Web Service on Render**:
+   - Go to https://dashboard.render.com
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+   - Settings:
+     - **Name**: `enterprise-ai-backend`
+     - **Runtime**: `Python 3.11`
+     - **Build Command**: `pip install -r requirements.txt`
+     - **Start Command**: `uvicorn backend.app.main:app --host 0.0.0.0 --port 8080`
+     - **Environment**: Add any required secrets (e.g., API keys)
+
+2. **After deployment**, note the service URL (e.g., `https://enterprise-ai-backend.onrender.com`)
+
+### Frontend Deployment (Streamlit Cloud)
+
+1. **Connect GitHub Repository**:
+   - Go to https://share.streamlit.io
+   - Click "New app"
+   - Select your GitHub repository
+   - Set:
+     - **Repository**: `your-org/enterprise-governance-intelligence-platform`
+     - **Branch**: `main` (or your deployment branch)
+     - **Main file path**: `frontend/app.py`
+
+2. **Configure Secrets**:
+   - In your app's settings (top-right menu), click "Advanced settings"
+   - Go to the "Secrets" section
+   - Add:
+     ```toml
+     API_BASE_URL = "https://enterprise-ai-backend.onrender.com"
+     ```
+   - Click "Save"
+
+3. **Deploy**:
+   - Streamlit Cloud will automatically deploy
+   - Access your frontend at `https://<your-username>-enterprise-ai.streamlit.app`
+
+### Verify Deployment
+
+1. **Check Backend Health**:
+   ```bash
+   curl https://enterprise-ai-backend.onrender.com/health
+   ```
+
+2. **Check Frontend**:
+   - Open the frontend URL in a browser
+   - Navigate to the Dashboard
+   - Look for "📡 Backend" in the sidebar
+   - Verify it shows your Render backend URL
+
+3. **Test Upload**:
+   - Go to "Upload Center"
+   - Upload a test document
+   - Verify the pipeline processes successfully
+
+### Environment Variables
+
+#### Backend (Render)
+
+Set these in Render's environment:
+```env
+DATABASE_URL=your-database-url
+OPENAI_API_KEY=your-api-key
+LOG_LEVEL=info
+```
+
+#### Frontend (Streamlit Cloud)
+
+Set in Streamlit Cloud Secrets:
+```toml
+API_BASE_URL = "https://your-render-backend.onrender.com"
+```
+
+### Configuration Reference
+
+| Setting | Local Dev | Production |
+|---------|-----------|-----------|
+| **Frontend Host** | `localhost:8501` | `https://<app-name>.streamlit.app` |
+| **Backend Host** | `localhost:8000` | `https://<app-name>.onrender.com` |
+| **API Base URL** | `http://localhost:8000` | `https://<app-name>.onrender.com` |
+| **Configuration** | `.streamlit/secrets.toml` | Streamlit Cloud Secrets |
+
+### Troubleshooting
+
+#### "Cannot connect to backend"
+
+1. **Verify Render deployment is active**:
+   ```bash
+   curl https://your-backend.onrender.com/health
+   ```
+
+2. **Check Streamlit Cloud Secrets**:
+   - Go to app settings → "Secrets"
+   - Verify `API_BASE_URL` is set and correct
+   - No typos in the URL
+
+3. **Check CORS on backend**:
+   - Ensure FastAPI has CORS middleware enabled for Streamlit Cloud origin
+   - Expected: `CORSMiddleware(app, allow_origins=["*"])`
+
+4. **Verify Render logs**:
+   - In Render dashboard, check the backend service logs
+   - Look for startup errors or connection issues
+
+#### Timeout Errors
+
+- Check backend performance in Render logs
+- May need to increase timeout in `frontend/config.py`'s `make_api_request(timeout=10)`
+- Render free tier may have cold starts; consider upgrading plan
+
+#### Secret Not Found
+
+- Confirm secret is saved in Streamlit Cloud (not just Render)
+- Click "Save" when adding secrets
+- Secrets are encrypted and take ~30 seconds to propagate
+- Force a rerun after saving secrets
+
+### Cost Considerations
+
+- **Streamlit Cloud**: Free tier available (Community)
+- **Render**: Free tier with limitations (spins down after 15 min inactivity)
+- For production: Consider upgrading Render to a paid plan for always-on service
+
+### Customization
+
+#### Change API Timeout
+
+Edit `frontend/config.py`:
+```python
+def make_api_request(..., timeout: int = 10):
+    # Change timeout to 30 for slower backends
+    response = requests.request(method, url, timeout=timeout, **kwargs)
+```
+
+#### Add Additional Secrets
+
+Update `.streamlit/secrets.toml.example` and Streamlit Cloud Secrets:
+```toml
+API_BASE_URL = "https://your-backend.onrender.com"
+LOG_LEVEL = "info"
+CUSTOM_SETTING = "value"
+```
+
+Access in code:
+```python
+import streamlit as st
+custom_value = st.secrets.get("CUSTOM_SETTING", "default")
+```
+
 ## Testing
 
 ```powershell

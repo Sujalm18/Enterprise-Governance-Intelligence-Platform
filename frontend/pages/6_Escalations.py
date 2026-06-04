@@ -6,9 +6,12 @@ View open escalations and route them to target stakeholders.
 
 import streamlit as st
 import requests
-import os
+import sys
+from pathlib import Path
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_endpoint, make_api_request
 
 st.set_page_config(page_title="Escalations | AI Governance", page_icon="🚨", layout="wide")
 
@@ -38,20 +41,12 @@ with col_f2:
         st.rerun()
 
 # ─── Fetch Escalations ───────────────────────────────────────────────────────
-try:
-    params = {}
-    if esc_status_filter != "All":
-        params["status"] = esc_status_filter
+params = {}
+if esc_status_filter != "All":
+    params["status"] = esc_status_filter
 
-    resp = requests.get(f"{API_BASE}/governance/escalations", params=params, timeout=10)
-    resp.raise_for_status()
-    escalations = resp.json()
-except requests.exceptions.ConnectionError:
-    st.error("⚠️ Cannot connect to backend.")
-    escalations = []
-except Exception as e:
-    st.error(f"Error: {e}")
-    escalations = []
+with st.spinner("Loading escalations..."):
+    escalations = make_api_request("GET", "api/governance/escalations", params=params) or []
 
 # ─── Summary ──────────────────────────────────────────────────────────────────
 open_count = sum(1 for e in escalations if e.get("status") == "open")
@@ -114,14 +109,11 @@ else:
                     if not routing_target.strip():
                         st.error("Please enter a routing target.")
                     else:
-                        try:
-                            resp = requests.post(
-                                f"{API_BASE}/governance/escalations/{esc['id']}/route",
-                                json={"routing_target": routing_target.strip()},
-                                timeout=10
-                            )
-                            resp.raise_for_status()
+                        result = make_api_request(
+                            "POST",
+                            f"api/governance/escalations/{esc['id']}/route",
+                            json={"routing_target": routing_target.strip()}
+                        )
+                        if result:
                             st.success(f"✅ Escalation routed to **{routing_target}**!", icon="📨")
                             st.rerun()
-                        except Exception as e:
-                            st.error(f"Error routing: {e}")

@@ -7,6 +7,12 @@ visual identity (dark/steel-blue enterprise theme).
 """
 
 import streamlit as st
+import sys
+from pathlib import Path
+
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent))
+from config import get_backend_display_info
 
 # ─── Page Config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -186,7 +192,7 @@ with st.sidebar:
     <div style="padding: 0.8rem; background: rgba(37,99,235,0.1); border-radius: 8px;
                 border-left: 3px solid #2563eb; margin-top: 0.5rem;">
         <p style="margin:0; font-size: 0.78rem; color: #8ba4c4;">
-            📡 Backend: <code>localhost:8000</code><br>
+            📡 Backend: <code>""" + get_backend_display_info() + """</code><br>
             🔧 Mode: Mock AI Provider
         </p>
     </div>

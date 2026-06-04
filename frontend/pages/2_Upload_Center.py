@@ -8,9 +8,12 @@ Supports PDF, DOCX, TXT.
 import streamlit as st
 import requests
 import time
-import os
+import sys
+from pathlib import Path
 
-API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000/api")
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_endpoint, make_api_request, UPLOAD_TIMEOUT
 
 st.set_page_config(page_title="Upload Center | AI Governance", page_icon="📤", layout="wide")
 
@@ -172,23 +175,30 @@ st.markdown("---")
 if uploaded_file:
     if st.button("🚀 Upload & Process Document", type="primary", use_container_width=True):
         with st.spinner("Uploading document and initiating pipeline..."):
-            try:
-                files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-                params = {
-                    "chunk_size": chunk_size,
-                    "chunk_overlap": chunk_overlap,
-                    "use_rag": use_rag
-                }
+            # Show informative message about what to expect
+            st.info(
+                "📡 Uploading... If this takes longer than 20 seconds, "
+                "the backend may be waking from Render free-tier sleep. "
+                "Please wait—this is normal on first request.",
+                icon="⏳"
+            )
+            
+            files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
+            params = {
+                "chunk_size": chunk_size,
+                "chunk_overlap": chunk_overlap,
+                "use_rag": use_rag
+            }
 
-                resp = requests.post(
-                    f"{API_BASE}/upload",
-                    files=files,
-                    params=params,
-                    timeout=30
-                )
-                resp.raise_for_status()
-                result = resp.json()
+            result = make_api_request(
+                "POST",
+                "api/upload",
+                files=files,
+                params=params,
+                timeout=UPLOAD_TIMEOUT  # 120s timeout for large files + cold-start
+            )
 
+            if result:
                 st.success(f"✅ Document uploaded successfully! Document ID: **{result['id']}**", icon="🎉")
 
                 st.markdown(f"""
@@ -239,12 +249,8 @@ if uploaded_file:
 
                 st.markdown("---")
                 st.info("Tip: Use 'View Workflow Progress' to jump to the job and monitor ingestion stages.", icon="💡")
+            else:
+                st.error("Upload failed. Check the backend connection.", icon="❌")
 
-            except requests.exceptions.ConnectionError:
-                st.error("⚠️ Cannot connect to backend at localhost:8000. Is the server running?")
-            except requests.exceptions.HTTPError as e:
-                st.error(f"❌ Upload failed: {e.response.text}")
-            except Exception as e:
-                st.error(f"❌ Unexpected error: {e}")
 else:
     st.info("👆 Select a document above to begin the upload process.", icon="📎")
