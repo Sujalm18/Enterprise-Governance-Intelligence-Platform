@@ -40,16 +40,7 @@ def confidence_badge(score: float) -> str:
 
 
 def fetch_dashboard():
-    try:
-        resp = requests.get(get_api_endpoint("api/governance/dashboard/stats"), timeout=10)
-        resp.raise_for_status()
-        return resp.json()
-    except requests.exceptions.ConnectionError:
-        st.error("⚠️ Cannot connect to backend. Is the server running?")
-        return None
-    except Exception as e:
-        st.error(f"Error fetching dashboard data: {e}")
-        return None
+    return make_api_request("GET", "api/governance/dashboard/stats")
 
 
 # ─── Refresh Button ───────────────────────────────────────────────────────────
@@ -58,7 +49,8 @@ with col_refresh:
     if st.button("🔄 Refresh Data", key="refresh_dashboard"):
         st.rerun()
 
-data = fetch_dashboard()
+with st.spinner("Fetching dashboard data..."):
+    data = fetch_dashboard()
 
 if data:
     # ─── KPI Row 1: Document & Report Metrics ─────────────────────────────────

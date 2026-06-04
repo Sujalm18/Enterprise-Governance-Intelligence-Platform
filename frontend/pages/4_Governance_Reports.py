@@ -13,7 +13,7 @@ from pathlib import Path
 
 # Add parent directory to path to import config
 sys.path.append(str(Path(__file__).parent.parent))
-from config import get_api_endpoint
+from config import get_api_endpoint, make_api_request
 
 st.set_page_config(page_title="Reports | AI Governance", page_icon="📋", layout="wide")
 
@@ -126,20 +126,13 @@ with col_f3:
         st.rerun()
 
 # ─── Fetch Reports ───────────────────────────────────────────────────────────
-try:
-    params = {"is_latest": show_latest_only}
-    if filter_status != "All":
-        params["review_status"] = filter_status
+params = {"is_latest": show_latest_only}
+if filter_status != "All":
+    params["review_status"] = filter_status
 
-    resp = requests.get(get_api_endpoint("api/governance/reports"), params=params, timeout=10)
-    resp.raise_for_status()
-    reports = resp.json()
-except requests.exceptions.ConnectionError:
-    st.error("⚠️ Cannot connect to backend. Is the server running?")
-    reports = []
-except Exception as e:
-    st.error(f"Error: {e}")
-    reports = []
+with st.spinner("Loading governance reports..."):
+    # Uses default 60s timeout from config (handles Render cold-start with retry)
+    reports = make_api_request("GET", "api/governance/reports", params=params) or []
 
 if not reports:
     st.info("No reports found. Upload and process a document to generate reports.", icon="📭")

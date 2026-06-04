@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Add parent directory to path to import config
 sys.path.append(str(Path(__file__).parent.parent))
-from config import get_api_endpoint
+from config import get_api_endpoint, make_api_request
 
 st.set_page_config(page_title="Review Queue | AI Governance", page_icon="✅", layout="wide")
 
@@ -44,20 +44,12 @@ with col_r:
     if st.button("🔄 Refresh Queue"):
         st.rerun()
 
-try:
-    resp = requests.get(
-        get_api_endpoint("api/governance/reports"),
-        params={"is_latest": True, "review_status": "pending_review"},
-        timeout=10
-    )
-    resp.raise_for_status()
-    pending_reports = resp.json()
-except requests.exceptions.ConnectionError:
-    st.error("⚠️ Cannot connect to backend. Is the server running?")
-    pending_reports = []
-except Exception as e:
-    st.error(f"Error: {e}")
-    pending_reports = []
+with st.spinner("Loading review queue..."):
+    pending_reports = make_api_request(
+        "GET",
+        "api/governance/reports",
+        params={"is_latest": True, "review_status": "pending_review"}
+    ) or []
 
 if not pending_reports:
     st.success("🎉 Review queue is empty — no pending reports!", icon="✅")
@@ -160,26 +152,23 @@ else:
                 if not reviewer_name.strip():
                     st.error("Please enter a reviewer name.")
                 else:
-                    try:
-                        payload = {
-                            "reviewer": reviewer_name.strip(),
-                            "review_status": action,
-                            "review_notes": review_notes
-                        }
-                        resp = requests.patch(
-                            get_api_endpoint(f"api/governance/reports/{report['id']}/review"),
-                            json=payload,
-                            timeout=10
-                        )
-                        resp.raise_for_status()
+                    payload = {
+                        "reviewer": reviewer_name.strip(),
+                        "review_status": action,
+                        "review_notes": review_notes
+                    }
+                    result = make_api_request(
+                        "PATCH",
+                        f"api/governance/reports/{report['id']}/review",
+                        json=payload
+                    )
 
+                    if result:
                         if action == "approved":
                             st.success(f"✅ Report #{report['id']} approved successfully!", icon="🎉")
                         else:
                             st.warning(f"🔄 Changes requested for Report #{report['id']}.")
 
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Error submitting review: {e}")
 
             st.markdown("---")
