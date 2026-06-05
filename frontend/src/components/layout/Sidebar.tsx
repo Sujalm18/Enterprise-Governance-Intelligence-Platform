@@ -59,7 +59,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-slate-800 px-6 py-4 text-xs text-slate-400">
-        React foundation only. API integration begins in the next phase.
+        Live governance intelligence powered by the FastAPI backend.
       </div>
     </aside>
   );
