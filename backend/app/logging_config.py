@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -21,9 +22,12 @@ def setup_logging():
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(formatter)
     
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+
     # Root Logger Config
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(getattr(logging, log_level, logging.INFO))
+    root_logger.handlers.clear()
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
     

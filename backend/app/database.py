@@ -7,9 +7,13 @@ from backend.app.migrations import run_sqlite_migrations, validate_database_sche
 
 logger = logging.getLogger("governance_copilot.database")
 
+engine_kwargs = {}
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Required for SQLite multi-threading
+    **engine_kwargs,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

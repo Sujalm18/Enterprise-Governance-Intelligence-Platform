@@ -19,8 +19,8 @@ app = FastAPI(
 # Enable CORS for frontend connection
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For dev environments, streamline origins
-    allow_credentials=True,
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"]
 )
@@ -50,5 +50,6 @@ def health_check():
         "status": "healthy",
         "service": "governance-intelligence-api",
         "provider": settings.AI_PROVIDER,
-        "mock_mode_active": settings.USE_MOCK_MODE
+        "mock_mode_active": settings.USE_MOCK_MODE,
+        "database_dialect": settings.DATABASE_URL.split(":", 1)[0],
     }

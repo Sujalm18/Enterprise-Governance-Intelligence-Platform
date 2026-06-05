@@ -9,7 +9,7 @@ docker compose -f deployment/docker/docker-compose.yml up --build
 Services:
 
 - Backend API: `http://localhost:8000`
-- Frontend: `http://localhost:8501`
+- React frontend: `http://localhost:3000`
 
 ## Environment
 
@@ -25,6 +25,27 @@ On Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
+## Railway
+
+Railway is the recommended full-stack deployment target.
+
+Services:
+
+- Backend service rooted at `backend/`
+- Frontend service rooted at `frontend/`
+- Railway PostgreSQL service
+
+Use:
+
+- [Railway deployment guide](railway_deployment.md)
+- [Backend environment example](../../deployment/railway/backend.env.example)
+- [Frontend environment example](../../deployment/railway/frontend.env.example)
+
+Health checks:
+
+- Backend: `/health`
+- Frontend: `/health`
+
 ## Render
 
 Backend:
@@ -37,12 +58,6 @@ Frontend:
 
 - Start command: `streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0`
 - Set `API_BASE_URL` once frontend configuration is externalized.
-
-## Railway
-
-- Use `deployment/docker/Dockerfile` or a Python service.
-- Expose port `8000` for the API.
-- Use a volume for `data/`.
 
 ## Azure App Service
 

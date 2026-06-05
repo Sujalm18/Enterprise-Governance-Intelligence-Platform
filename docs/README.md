@@ -17,6 +17,7 @@ This directory contains the durable technical documentation for the Enterprise G
 ## Deployment
 
 - [Deployment guide](deployment/deployment.md)
+- [Railway deployment guide](deployment/railway_deployment.md)
 - [Deployment checklist](deployment/deployment_checklist.md)
 - [Legacy deployment guide](deployment/deployment_guide.md)
 

@@ -18,12 +18,12 @@ Enterprise delivery teams produce governance information across steering packs, 
 | Area | Purpose |
 | --- | --- |
 | [backend/](backend/README.md) | FastAPI service, ingestion, OCR, classification, extraction, database models |
-| [frontend/](frontend/README.md) | Streamlit executive UI and report views |
+| [frontend/](frontend/README.md) | React, TypeScript, Vite executive UI and report views |
 | [docs/](docs/README.md) | Architecture, ontology, deployment, regression, validation, and roadmap documentation |
 | [demo/](demo/walkthrough/demo_walkthrough.md) | Demo walkthrough material and curated sample outputs |
 | [scripts/](scripts/) | Setup, deployment, regression, and maintenance automation |
 | [data/regression/](data/regression/) | Regression corpus and generated evaluation artifacts |
-| [deployment/docker/](deployment/docker/) | Dockerfile and Compose deployment entry points |
+| [deployment/](deployment/) | Docker, Railway, and cloud deployment entry points |
 | [tests/](tests/) | Unit, integration, and regression tests |
 
 ## Enterprise Problems Solved
@@ -96,7 +96,7 @@ uvicorn backend.app.main:app --reload
 Frontend:
 
 ```powershell
-streamlit run frontend/app.py
+npm --prefix frontend run dev
 ```
 
 ## Regression Evaluation
@@ -131,7 +131,25 @@ docker compose -f deployment/docker/docker-compose.yml up --build
 Deployment docs:
 
 - [Deployment guide](docs/deployment/deployment.md)
+- [Railway deployment guide](docs/deployment/railway_deployment.md)
 - [Deployment checklist](docs/deployment/deployment_checklist.md)
+
+## Railway Deployment
+
+The production deployment target is a single Railway project with:
+
+- React frontend service rooted at `frontend/`
+- FastAPI backend service rooted at `backend/`
+- Railway PostgreSQL service
+
+Required production variables:
+
+- Frontend: `VITE_API_BASE_URL=https://your-backend-service.up.railway.app`
+- Backend: `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+- Backend: `FRONTEND_ORIGIN=https://your-frontend-service.up.railway.app`
+- Backend: `CORS_ORIGINS=https://your-frontend-service.up.railway.app`
+
+See [Railway deployment guide](docs/deployment/railway_deployment.md) for service setup, health checks, and troubleshooting.
 
 ## Cloud Deployment: Streamlit + Render
 

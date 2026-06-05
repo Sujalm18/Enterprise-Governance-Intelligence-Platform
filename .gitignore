@@ -20,6 +20,15 @@ data/logs/
 data/*.db
 data/rag_store.json
 
+# Node / frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
 # OS and editor noise
 .DS_Store
 Thumbs.db

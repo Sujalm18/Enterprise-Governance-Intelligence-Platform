@@ -1,11 +1,15 @@
 services:
   api:
     build:
-      context: ../..
-      dockerfile: deployment/docker/Dockerfile
+      context: ../../backend
+      dockerfile: Dockerfile
     container_name: governance-api
     env_file:
       - ../../.env.example
+    environment:
+      PORT: 8000
+      FRONTEND_ORIGIN: http://localhost:3000
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:8501
     ports:
       - "8000:8000"
     volumes:
@@ -18,13 +22,19 @@ services:
 
   frontend:
     build:
-      context: ../..
-      dockerfile: deployment/docker/Dockerfile
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
     container_name: governance-frontend
-    command: streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501
+    environment:
+      PORT: 8080
     depends_on:
       - api
     ports:
-      - "8501:8501"
-    volumes:
-      - ../../data:/app/data
+      - "3000:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

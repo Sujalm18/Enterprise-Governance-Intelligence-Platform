@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # App General Settings
     APP_NAME: str = "Enterprise AI Governance & Operations Copilot"
     DEBUG: bool = True
+    FRONTEND_ORIGIN: str = "http://localhost:5173"
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:8501"
+    CORS_ALLOW_CREDENTIALS: bool = False
     
     # DB & File Storage Settings
     DATABASE_URL: str = f"sqlite:///{DATA_DIR}/governance.db"
@@ -38,6 +41,9 @@ class Settings(BaseSettings):
         extra = "ignore"
 
     def model_post_init(self, __context) -> None:
+        if self.DATABASE_URL.startswith("postgres://"):
+            self.DATABASE_URL = self.DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
         # Check environment for Anthropic API Key directly if not set by pydantic settings
         api_key = os.environ.get("ANTHROPIC_API_KEY", self.ANTHROPIC_API_KEY)
         if api_key:
@@ -47,5 +53,16 @@ class Settings(BaseSettings):
         else:
             self.USE_MOCK_MODE = True
             self.AI_PROVIDER = "mock"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        origins = {
+            origin.strip().rstrip("/")
+            for origin in self.CORS_ORIGINS.split(",")
+            if origin.strip()
+        }
+        if self.FRONTEND_ORIGIN.strip():
+            origins.add(self.FRONTEND_ORIGIN.strip().rstrip("/"))
+        return sorted(origins) or ["http://localhost:5173"]
 
 settings = Settings()
