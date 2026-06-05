@@ -13,13 +13,19 @@ DATA_DIR.mkdir(exist_ok=True, parents=True)
 UPLOADS_DIR.mkdir(exist_ok=True, parents=True)
 PROMPTS_DIR.mkdir(exist_ok=True, parents=True)
 
+DEFAULT_CORS_ORIGINS = (
+    "https://radiant-intuition-production-3a80.up.railway.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+)
+
 class Settings(BaseSettings):
     # App General Settings
     APP_NAME: str = "Enterprise AI Governance & Operations Copilot"
     DEBUG: bool = True
-    FRONTEND_ORIGIN: str = "http://localhost:5173"
-    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000,http://localhost:8501"
-    CORS_ALLOW_CREDENTIALS: bool = False
+    FRONTEND_ORIGIN: str = "https://radiant-intuition-production-3a80.up.railway.app"
+    CORS_ORIGINS: str = ",".join(DEFAULT_CORS_ORIGINS)
+    CORS_ALLOW_CREDENTIALS: bool = True
     
     # DB & File Storage Settings
     DATABASE_URL: str = f"sqlite:///{DATA_DIR}/governance.db"
@@ -56,11 +62,12 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        origins = {
+        origins = set(DEFAULT_CORS_ORIGINS)
+        origins.update({
             origin.strip().rstrip("/")
             for origin in self.CORS_ORIGINS.split(",")
             if origin.strip()
-        }
+        })
         if self.FRONTEND_ORIGIN.strip():
             origins.add(self.FRONTEND_ORIGIN.strip().rstrip("/"))
         return sorted(origins) or ["http://localhost:5173"]
