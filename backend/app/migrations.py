@@ -89,96 +89,192 @@ class DatabaseSchemaMismatchError(RuntimeError):
     """Raised when the database schema does not match the SQLAlchemy models."""
 
 
-def run_sqlite_migrations(engine: Engine) -> None:
-    """Apply idempotent SQLite migrations required by the governance refactor."""
-    if engine.dialect.name != "sqlite":
-        logger.info("Skipping SQLite migrations for non-SQLite database dialect: %s", engine.dialect.name)
-        return
+def _is_postgres(engine: Engine) -> bool:
+    return engine.dialect.name == "postgresql"
+
+
+def _datetime_type(engine: Engine) -> str:
+    return "TIMESTAMP" if _is_postgres(engine) else "DATETIME"
+
+
+def _bool_default_false(engine: Engine) -> str:
+    return "BOOLEAN NOT NULL DEFAULT FALSE" if _is_postgres(engine) else "BOOLEAN NOT NULL DEFAULT 0"
+
+
+def _serial_pk(engine: Engine) -> str:
+    return "SERIAL PRIMARY KEY" if _is_postgres(engine) else "INTEGER NOT NULL PRIMARY KEY"
+
+
+def _insert_ignore_organizations(engine: Engine) -> str:
+    """Return the dialect-appropriate INSERT-if-not-exists for seed tenants."""
+    if _is_postgres(engine):
+        return """
+            INSERT INTO organizations (id, name, created_at)
+            VALUES 
+            (1, 'Default Tenant', '2026-01-01 00:00:00'),
+            (2, 'Acme Corporation', '2026-01-01 00:00:00'),
+            (3, 'Globex Corporation', '2026-01-01 00:00:00')
+            ON CONFLICT (id) DO NOTHING
+        """
+    else:
+        return """
+            INSERT OR IGNORE INTO organizations (id, name, created_at)
+            VALUES 
+            (1, 'Default Tenant', '2026-01-01 00:00:00'),
+            (2, 'Acme Corporation', '2026-01-01 00:00:00'),
+            (3, 'Globex Corporation', '2026-01-01 00:00:00')
+        """
+
+
+def _add_column_if_missing(conn, inspector, table_name: str, column_name: str, column_type: str, is_pg: bool) -> None:
+    """Add a column to a table if it doesn't already exist, dialect-aware."""
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns(table_name)
+    }
+    if column_name not in existing_columns:
+        logger.info("Adding column %s.%s (%s)", table_name, column_name, column_type)
+        if is_pg:
+            # PostgreSQL: wrap in DO block to gracefully handle race conditions
+            conn.execute(text(
+                f"""
+                DO $$
+                BEGIN
+                    ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type};
+                EXCEPTION
+                    WHEN duplicate_column THEN
+                        NULL;
+                END $$;
+                """
+            ))
+        else:
+            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}"))
+
+
+def run_migrations(engine: Engine) -> None:
+    """Apply idempotent database migrations for both SQLite and PostgreSQL."""
+    dialect = engine.dialect.name
+    is_pg = _is_postgres(engine)
+    dt = _datetime_type(engine)
+    bool_false = _bool_default_false(engine)
+
+    logger.info("Running database migrations for dialect: %s", dialect)
 
     inspector = inspect(engine)
     table_names = set(inspector.get_table_names())
 
     with engine.begin() as conn:
+        # ──────────────────────────────────────────────
+        # 1. Ensure organizations table exists
+        # ──────────────────────────────────────────────
         logger.info("Ensuring organizations table exists")
-        conn.execute(
-            text(
-                """
+        if is_pg:
+            conn.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS organizations (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR NOT NULL UNIQUE,
+                    created_at {dt} NOT NULL,
+                    slack_webhook_url VARCHAR,
+                    teams_webhook_url VARCHAR
+                )
+            """))
+        else:
+            conn.execute(text(f"""
                 CREATE TABLE IF NOT EXISTS organizations (
                     id INTEGER NOT NULL,
                     name VARCHAR NOT NULL UNIQUE,
-                    created_at DATETIME NOT NULL,
+                    created_at {dt} NOT NULL,
                     slack_webhook_url VARCHAR,
                     teams_webhook_url VARCHAR,
                     PRIMARY KEY (id)
                 )
-                """
-            )
-        )
+            """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizations_id ON organizations (id)"))
 
-        # Seed default tenants if not exist
-        conn.execute(
-            text(
-                """
-                INSERT OR IGNORE INTO organizations (id, name, created_at)
-                VALUES 
-                (1, 'Default Tenant', '2026-01-01 00:00:00'),
-                (2, 'Acme Corporation', '2026-01-01 00:00:00'),
-                (3, 'Globex Corporation', '2026-01-01 00:00:00')
-                """
-            )
-        )
+        # Seed default tenants
+        conn.execute(text(_insert_ignore_organizations(engine)))
 
+        # Refresh inspector after table creation
+        inspector = inspect(engine)
+        table_names = set(inspector.get_table_names())
+
+        # ──────────────────────────────────────────────
+        # 2. Migrate governance_reports columns
+        # ──────────────────────────────────────────────
         if "governance_reports" in table_names:
-            existing_columns = {
-                column["name"]
-                for column in inspector.get_columns("governance_reports")
-            }
             for column_name, column_type in GOVERNANCE_REPORT_REQUIRED_COLUMNS.items():
-                if column_name not in existing_columns:
-                    logger.info("Adding missing column governance_reports.%s", column_name)
-                    conn.execute(
-                        text(f"ALTER TABLE governance_reports ADD COLUMN {column_name} {column_type}")
-                    )
+                _add_column_if_missing(conn, inspector, "governance_reports", column_name, column_type, is_pg)
 
-        # Apply new workflow alterations across all tables
+        # ──────────────────────────────────────────────
+        # 3. Apply workflow columns across all tables
+        # ──────────────────────────────────────────────
         for table_name, columns in WORKFLOW_TABLES_COLUMNS.items():
             if table_name in table_names:
-                existing_columns = {
-                    column["name"]
-                    for column in inspector.get_columns(table_name)
-                }
                 for column_name, column_type in columns.items():
-                    if column_name not in existing_columns:
-                        logger.info("Adding workflow column %s.%s", table_name, column_name)
-                        conn.execute(
-                            text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
-                        )
+                    _add_column_if_missing(conn, inspector, table_name, column_name, column_type, is_pg)
 
+        # ──────────────────────────────────────────────
+        # 4. Ensure meeting_actions table exists
+        # ──────────────────────────────────────────────
         logger.info("Ensuring meeting_actions table exists")
-        conn.execute(
-            text(
-                """
+        if is_pg:
+            conn.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS meeting_actions (
+                    id SERIAL PRIMARY KEY,
+                    report_id INTEGER NOT NULL REFERENCES governance_reports (id) ON DELETE CASCADE,
+                    owner VARCHAR NOT NULL,
+                    task TEXT NOT NULL,
+                    due_date VARCHAR,
+                    created_at {dt} NOT NULL,
+                    tenant_id INTEGER DEFAULT 1
+                )
+            """))
+        else:
+            conn.execute(text(f"""
                 CREATE TABLE IF NOT EXISTS meeting_actions (
                     id INTEGER NOT NULL,
                     report_id INTEGER NOT NULL,
                     owner VARCHAR NOT NULL,
                     task TEXT NOT NULL,
                     due_date VARCHAR,
-                    created_at DATETIME NOT NULL,
+                    created_at {dt} NOT NULL,
                     tenant_id INTEGER DEFAULT 1,
                     PRIMARY KEY (id),
                     FOREIGN KEY(report_id) REFERENCES governance_reports (id) ON DELETE CASCADE
                 )
-                """
-            )
-        )
+            """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_meeting_actions_id ON meeting_actions (id)"))
 
+        # ──────────────────────────────────────────────
+        # 5. Ensure mitigation_tasks table exists
+        # ──────────────────────────────────────────────
         logger.info("Ensuring mitigation_tasks table exists")
-        conn.execute(
-            text(
-                """
+        if is_pg:
+            conn.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS mitigation_tasks (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR NOT NULL,
+                    description TEXT,
+                    related_raid_item_id INTEGER NOT NULL REFERENCES raid_items (id) ON DELETE CASCADE,
+                    related_escalation_id INTEGER REFERENCES escalation_items (id) ON DELETE SET NULL,
+                    owner_role VARCHAR NOT NULL,
+                    owner_name VARCHAR,
+                    priority VARCHAR NOT NULL,
+                    risk_score INTEGER NOT NULL,
+                    target_date VARCHAR,
+                    sla_status VARCHAR NOT NULL DEFAULT 'ON_TRACK',
+                    status VARCHAR NOT NULL DEFAULT 'PLANNED',
+                    completion_percentage INTEGER NOT NULL DEFAULT 0,
+                    effectiveness INTEGER NOT NULL DEFAULT 20,
+                    created_at {dt} NOT NULL,
+                    updated_at {dt} NOT NULL,
+                    completed_at {dt},
+                    verified_at {dt},
+                    tenant_id INTEGER DEFAULT 1
+                )
+            """))
+        else:
+            conn.execute(text(f"""
                 CREATE TABLE IF NOT EXISTS mitigation_tasks (
                     id INTEGER NOT NULL,
                     title VARCHAR NOT NULL,
@@ -194,24 +290,40 @@ def run_sqlite_migrations(engine: Engine) -> None:
                     status VARCHAR NOT NULL DEFAULT 'PLANNED',
                     completion_percentage INTEGER NOT NULL DEFAULT 0,
                     effectiveness INTEGER NOT NULL DEFAULT 20,
-                    created_at DATETIME NOT NULL,
-                    updated_at DATETIME NOT NULL,
-                    completed_at DATETIME,
-                    verified_at DATETIME,
+                    created_at {dt} NOT NULL,
+                    updated_at {dt} NOT NULL,
+                    completed_at {dt},
+                    verified_at {dt},
                     tenant_id INTEGER DEFAULT 1,
                     PRIMARY KEY (id),
                     FOREIGN KEY(related_raid_item_id) REFERENCES raid_items (id) ON DELETE CASCADE,
                     FOREIGN KEY(related_escalation_id) REFERENCES escalation_items (id) ON DELETE SET NULL
                 )
-                """
-            )
-        )
+            """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_mitigation_tasks_id ON mitigation_tasks (id)"))
 
+        # ──────────────────────────────────────────────
+        # 6. Ensure notifications table exists
+        # ──────────────────────────────────────────────
         logger.info("Ensuring notifications table exists")
-        conn.execute(
-            text(
-                """
+        if is_pg:
+            conn.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id SERIAL PRIMARY KEY,
+                    severity VARCHAR NOT NULL,
+                    notification_type VARCHAR NOT NULL,
+                    title VARCHAR NOT NULL,
+                    message TEXT NOT NULL,
+                    recipient_role VARCHAR NOT NULL,
+                    related_entity_type VARCHAR,
+                    related_entity_id INTEGER,
+                    read_status {bool_false},
+                    created_at {dt} NOT NULL,
+                    tenant_id INTEGER DEFAULT 1
+                )
+            """))
+        else:
+            conn.execute(text(f"""
                 CREATE TABLE IF NOT EXISTS notifications (
                     id INTEGER NOT NULL,
                     severity VARCHAR NOT NULL,
@@ -222,22 +334,39 @@ def run_sqlite_migrations(engine: Engine) -> None:
                     related_entity_type VARCHAR,
                     related_entity_id INTEGER,
                     read_status BOOLEAN NOT NULL DEFAULT 0,
-                    created_at DATETIME NOT NULL,
+                    created_at {dt} NOT NULL,
                     tenant_id INTEGER DEFAULT 1,
                     PRIMARY KEY (id)
                 )
-                """
-            )
-        )
+            """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_id ON notifications (id)"))
 
+        # ──────────────────────────────────────────────
+        # 7. Ensure governance_trend_snapshots table exists
+        # ──────────────────────────────────────────────
         logger.info("Ensuring governance_trend_snapshots table exists")
-        conn.execute(
-            text(
-                """
+        if is_pg:
+            conn.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS governance_trend_snapshots (
+                    id SERIAL PRIMARY KEY,
+                    timestamp {dt} NOT NULL,
+                    health_score INTEGER NOT NULL,
+                    maturity_score INTEGER NOT NULL,
+                    risk_exposure INTEGER NOT NULL,
+                    mitigation_effectiveness_pct FLOAT NOT NULL,
+                    sla_breaches INTEGER NOT NULL,
+                    open_escalations INTEGER NOT NULL,
+                    verified_mitigations INTEGER NOT NULL,
+                    critical_risks INTEGER NOT NULL,
+                    notification_volume INTEGER NOT NULL,
+                    tenant_id INTEGER DEFAULT 1
+                )
+            """))
+        else:
+            conn.execute(text(f"""
                 CREATE TABLE IF NOT EXISTS governance_trend_snapshots (
                     id INTEGER NOT NULL,
-                    timestamp DATETIME NOT NULL,
+                    timestamp {dt} NOT NULL,
                     health_score INTEGER NOT NULL,
                     maturity_score INTEGER NOT NULL,
                     risk_exposure INTEGER NOT NULL,
@@ -250,12 +379,17 @@ def run_sqlite_migrations(engine: Engine) -> None:
                     tenant_id INTEGER DEFAULT 1,
                     PRIMARY KEY (id)
                 )
-                """
-            )
-        )
+            """))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_governance_trend_snapshots_id ON governance_trend_snapshots (id)"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS ix_governance_trend_snapshots_timestamp ON governance_trend_snapshots (timestamp)"))
 
+    logger.info("Database migrations completed successfully for dialect: %s", dialect)
+
+
+# Legacy alias for backward compatibility
+def run_sqlite_migrations(engine: Engine) -> None:
+    """Legacy wrapper — delegates to the dialect-aware run_migrations."""
+    run_migrations(engine)
 
 
 def validate_database_schema(engine: Engine) -> None:
@@ -310,4 +444,5 @@ def schema_mismatch_response_detail(error: Exception) -> str:
 
 
 def is_schema_mismatch_error(error: Exception) -> bool:
-    return "no such column:" in str(error).lower() or "no such table:" in str(error).lower()
+    msg = str(error).lower()
+    return "no such column:" in msg or "no such table:" in msg or "does not exist" in msg

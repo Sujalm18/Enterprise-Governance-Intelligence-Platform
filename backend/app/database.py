@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from backend.app.config import settings
-from backend.app.migrations import run_sqlite_migrations, validate_database_schema
+from backend.app.migrations import run_migrations, validate_database_schema
 
 logger = logging.getLogger("governance_copilot.database")
 
@@ -33,7 +33,7 @@ def init_db():
     
     logger.info("Initializing database tables...")
     Base.metadata.create_all(bind=engine)
-    run_sqlite_migrations(engine)
+    run_migrations(engine)
     validate_database_schema(engine)
     
     db = SessionLocal()
