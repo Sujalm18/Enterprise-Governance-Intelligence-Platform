@@ -648,12 +648,33 @@ class MockProvider(AIProvider):
             if key in used:
                 return
             used.add(key)
+            desc_lower = excerpt.lower()
+            if any(k in desc_lower for k in ["pii", "encryption", "data", "privacy", "gdpr"]):
+                why = "Unencrypted PII databases violate GDPR Article 32, exposing the enterprise to regulatory fines up to 4% of global turnover."
+                actions = "1. Enable AES-256 database column encryption.\n2. Perform audit on data access keys.\n3. Implement dynamic data masking."
+                impact = "85% reduction in compliance exposure"
+            elif any(k in desc_lower for k in ["password", "credential", "auth", "access", "rate limit"]):
+                why = "Weak credential configurations or rate limiting gaps facilitate unauthorized privilege escalation and threat brute-forcing."
+                actions = "1. Force multi-factor authentication (MFA).\n2. Enforce complex password rotation policy.\n3. Deactivate stale contractor logins."
+                impact = "75% reduction in security breach likelihood"
+            elif any(k in desc_lower for k in ["vendor", "third-party", "supplier", "outsourcing"]):
+                why = "Single-source vendor dependencies create operational single points of failure for critical service level agreements."
+                actions = "1. Define backup supplier service contracts.\n2. Establish exit transition roadmap.\n3. Audit vendor security protocols."
+                impact = "60% operational resilience improvement"
+            else:
+                why = f"The identified {raid_type} impacts organizational delivery timelines and key governance control frameworks."
+                actions = f"1. Audit active control settings.\n2. Assign executive owner.\n3. Schedule daily progress review meetings."
+                impact = "50% risk profile reduction"
+
             raid_items.append({
                 "type": raid_type,
                 "description": self._truncate_text(excerpt, 240),
                 "severity": self._detect_severity(excerpt, severity),
                 "confidence_score": confidence,
-                "source_excerpt": excerpt
+                "source_excerpt": excerpt,
+                "explain_why": why,
+                "suggested_actions": actions,
+                "estimated_impact": impact
             })
 
         for entity in ontology_entities or []:
@@ -696,38 +717,6 @@ class MockProvider(AIProvider):
                 excerpt = excerpt + " | " + " | ".join(extras)
             add_item(raid_type, excerpt, "high" if raid_type in {"risk", "issue"} else "medium", 0.92)
 
-        if document_type == "escalation_memo" and not raid_items:
-            for line in text.splitlines():
-                clean = line.strip(" -")
-                if re.match(r"^\d+\.\s+", clean):
-                    clean = re.sub(r"^\d+\.\s+", "", clean)
-                    if any(term in clean.lower() for term in ["failure", "violation", "delay", "risk", "issue", "impact", "dispute"]):
-                        add_item("issue", clean, "high", 0.82)
-                elif re.match(r"^[-*]\s+", line.strip()):
-                    clean = re.sub(r"^[-*]\s+", "", line.strip())
-                    if any(term in clean.lower() for term in [
-                        "blocked", "active", "exposure", "vulnerability", "impact", "degraded",
-                        "compromise", "exfiltration", "failure", "delay", "risk", "incident"
-                    ]):
-                        add_item("issue", clean, "high", 0.8)
-
-        if document_type == "governance_report" and len(raid_items) < 3:
-            for line in text.splitlines():
-                clean = line.strip()
-                decision = re.match(r"Decision\s+\d+\s*:\s*(.+)", clean, flags=re.IGNORECASE)
-                escalation = re.match(r"Escalation\s+\d+\s*:\s*(.+)", clean, flags=re.IGNORECASE)
-                approval = re.match(r"Approval\s+\d+\s*:\s*(.+)", clean, flags=re.IGNORECASE)
-                if decision:
-                    if self._contains_material_governance_condition(decision.group(1)):
-                        add_item("action", decision.group(1), "medium", 0.8)
-                elif escalation:
-                    add_item("issue", escalation.group(1), "high", 0.82)
-                elif approval:
-                    if self._contains_material_governance_condition(approval.group(1)):
-                        add_item("action", approval.group(1), "medium", 0.8)
-
-        if document_type == "escalation_memo":
-            return self._cluster_raid_items(raid_items, document_type)[:8]
         return self._cluster_raid_items(raid_items, document_type)
 
     def _clean_raid_excerpt(self, excerpt: str) -> str:
@@ -1406,11 +1395,18 @@ class MockProvider(AIProvider):
                     continue
                 seen.add(excerpt.lower())
                 sent_lower = sent.lower()
+                why = "Executive committee escalation signals that critical path delivery metrics are in breach, requiring immediate steering intervention."
+                actions = "1. Schedule emergency steering committee sync.\n2. Formulate corrective remediation roadmap.\n3. Request budget/resource realignment."
+                impact = "80% reduction in program delivery risk"
+
                 escalation_items.append({
                     "description": excerpt,
                     "severity": "high" if any(term in sent_lower for term in ["critical", "urgent"]) else "medium",
                     "source_excerpt": sent,
-                    "confidence_score": 0.85
+                    "confidence_score": 0.85,
+                    "explain_why": why,
+                    "suggested_actions": actions,
+                    "estimated_impact": impact
                 })
         
         return escalation_items[:5]  # Limit to 5 escalations
@@ -1514,3 +1510,120 @@ class MockProvider(AIProvider):
                 type_counts[item.get("type", "item")] = type_counts.get(item.get("type", "item"), 0) + 1
             return ", ".join(f"{count} {kind}(s)" for kind, count in sorted(type_counts.items()))
         return ", ".join(themes[:3])
+
+
+    async def generate_text_completion(self, prompt: str, system_instruction: str = "") -> str:
+        logger.info("Generating mock text completion...")
+        prompt_lower = prompt.lower()
+        role = "Analyst"
+        if "role: manager" in prompt_lower or "role: manager" in system_instruction.lower():
+            role = "Manager"
+        elif "role: governance lead" in prompt_lower or "role: governance lead" in system_instruction.lower():
+            role = "Governance Lead"
+        elif "role: executive" in prompt_lower or "role: executive" in system_instruction.lower():
+            role = "Executive"
+
+        # Check for preset copilot questions
+        if "biggest governance risk" in prompt_lower:
+            return (
+                "Based on the active risk register, the most critical risk is **RAID-101: Unauthorized access exposure on cloud storage buckets**. "
+                "This Security vulnerability has a high risk score of 85, lacks verified mitigations, and is currently exposing the customer retention database to compliance audit failure. "
+                "Immediate owner assignment to the Security Team is recommended."
+            )
+        elif "focus on this week" in prompt_lower:
+            if role == "Manager":
+                return (
+                    "### Manager Focus Areas for this Week:\n"
+                    "1. **Review Ingestion Drafts**: 4 pending reports require your workflow review and sign-off.\n"
+                    "2. **Mitigation Check**: Follow up with Analysts on 3 overdue mitigation tasks.\n"
+                    "3. **Disputes**: Assist in routing 2 active escalations currently assigned to your team."
+                )
+            elif role in ("Governance Lead", "Executive"):
+                return (
+                    "### Executive & Lead Focus Areas for this Week:\n"
+                    "1. **Sign-off Pending Completions**: Verify 2 completed mitigation tasks currently awaiting your review.\n"
+                    "2. **Escalations Closure**: Moderate and resolve the 3 open critical escalations to unblock the ingestion pipeline.\n"
+                    "3. **SLA Breach Remediation**: Audit the root causes of the 5 overdue mitigations."
+                )
+            else:
+                return (
+                    "### Analyst Focus Areas for this Week:\n"
+                    "1. **Complete Overdue Tasks**: Address the 3 overdue mitigations assigned to you.\n"
+                    "2. **Mitigations Progress**: Update progress slides on active risks.\n"
+                    "3. **New Ingestions**: Ingest and audit the latest steering committee docs."
+                )
+        elif "health score declining" in prompt_lower:
+            return (
+                "The Governance Health Score declined primarily due to **5 overdue mitigation tasks** (-20 points) and **2 open critical escalations** (-16 points). "
+                "While we received +6 bonus points from 3 verified mitigations, the net effect resulted in a drop. "
+                "Resolving the overdue compliance review tasks will recover 16 points immediately."
+            )
+        elif "maturity score low" in prompt_lower:
+            return (
+                "The Governance Maturity Score is currently at **78 (Managed)**. The primary drag is the **Escalation Closure Rate (69%)** "
+                "and **Mitigation Completion Rate (74%)**. While SLA compliance is excellent at 91%, the open backlogs in escalations "
+                "and pending manager reviews are preventing transition to the **Optimized** maturity tier."
+            )
+        elif "overdue mitigations" in prompt_lower:
+            return (
+                "### Overdue Mitigation Summary:\n"
+                "- **Task #1**: Perform quarterly vendor security audit (Due 5 days ago, Owner: Security Lead).\n"
+                "- **Task #2**: Patch CVE-2026-4011 vulnerability in API Gateway (Due 3 days ago, Owner: Dev Team).\n"
+                "- **Task #3**: Implement database retention scripts (Due yesterday, Owner: Data Team)."
+            )
+        elif "open escalations" in prompt_lower:
+            return (
+                "### Active Escalations Summary:\n"
+                "1. **Escalation #1**: Steering Committee dispute regarding AI model training data licensing (Status: OPEN, Severity: CRITICAL).\n"
+                "2. **Escalation #2**: Cloud budget threshold breach due to unoptimized dev clusters (Status: OPEN, Severity: HIGH)."
+            )
+        elif "prioritize" in prompt_lower:
+            return (
+                "### Top 3 Priorities for leadership:\n"
+                "1. 🔥 **Resolve open escalations** (Count: 3, Impact: Potential SLA breach exposure).\n"
+                "2. ⚠️ **Remediate overdue mitigations** (Count: 5, Impact: Prevents target SLA breaches and compliance exposure).\n"
+                "3. 📋 **Review pending governance reports** (Count: 4, Impact: Completes draft ingestion pipeline review cycle)."
+            )
+        elif "board update" in prompt_lower:
+            return (
+                "### Board Update Statement\n\n"
+                "**Executive Summary:** Overall organizational governance stands at a **Health Score of 82 (Strong)** and a **Maturity Score of 78 (Managed)**. "
+                "All core workflows are isolated under dynamic tenant contexts.\n\n"
+                "**Key Actions Taken:** We successfully verified 3 critical mitigations this period, achieving a cumulative **35% risk reduction** across our digital portfolio. "
+                "However, we are currently monitoring 5 overdue mitigation tasks and 3 open escalations. "
+                "Targeted resource reassignments are underway to clear the SLA backlog this week."
+            )
+
+        # General / Briefing / Portfolio fallback
+        if "briefing" in prompt_lower:
+            return (
+                "# EXECUTIVE BRIEFING\n\n"
+                "### 1. Executive Summary\n"
+                "The organization's governance health remains stable at 82. We maintain a 'Managed' maturity level (score: 78).\n\n"
+                "### 2. Current State\n"
+                "Active Tenant context contains 10 documents processed, with a cumulative risk reduction of 35.0% achieved through verified mitigations.\n\n"
+                "### 3. Key Risks\n"
+                "- **Critical Risk**: Unauthorized access exposure in cloud storage bucket. (Risk Score: 85)\n"
+                "- **High Risk**: Missing encryption on backup datasets. (Risk Score: 72)\n\n"
+                "### 4. Operational Concerns\n"
+                "We currently have 5 overdue mitigation tasks causing SLA breaches, and 3 open committee-level escalations.\n\n"
+                "### 5. Recommendations\n"
+                "- Implement a centralized identity management plan.\n"
+                "- Establish clear SLA threshold notification alerts.\n\n"
+                "### 6. Next 30 Days\n"
+                "Remediate the cloud storage access controls and verify the outstanding database patch actions."
+            )
+        elif "recommendations" in prompt_lower:
+            return (
+                "### Dynamic Strategic Recommendations\n"
+                "- **Quick Wins**: Assign owners to all unowned security RAID items; configure webhook notification endpoints.\n"
+                "- **Medium-Term**: Implement a standardized data minimization and customer data deletion script.\n"
+                "- **Strategic**: Establish a formal AI Governance Board and publish policy guidelines for LLM training data."
+            )
+
+        return (
+            "**Governance Intelligence Analyst Agent Response**\n\n"
+            "This is a high-fidelity mock AI completion response. The active tenant has a Governance Health Score of 82. "
+            "All SLA monitors are active, and our root-cause analysis classifies 40% of open vulnerabilities under AI Governance and Security."
+        )
+

@@ -6,7 +6,7 @@ This document describes the architectural layout, data flow, and design patterns
 
 ## 1. System Topology & Data Flow
 
-The application follows a clean, layered architecture separating concerns between file ingestion, retrieval-augmented generation (RAG), AI orchestration, database persistence, REST APIs, and a Streamlit-based presentation layer.
+The application follows a clean, layered architecture separating concerns between file ingestion, retrieval-augmented generation (RAG), AI orchestration, database persistence, REST APIs, and a React (Vite + TypeScript)-based presentation layer.
 
 ```mermaid
 graph TD
@@ -20,7 +20,7 @@ graph TD
     G -->|Store Report & RAID/Escalations| H[SQLAlchemy / SQLite]
     H -->|Log Action| I[Audit Trail]
     H -->|Expose Data| J[FastAPI Endpoints]
-    J -->|Query & Action| K[Streamlit UI Pages]
+    J -->|Query & Action| K[React UI Pages]
 ```
 
 ### End-to-End Processing Steps:

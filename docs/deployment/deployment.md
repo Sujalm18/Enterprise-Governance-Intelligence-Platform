@@ -56,7 +56,7 @@ Backend:
 
 Frontend:
 
-- Start command: `streamlit run frontend/app.py --server.port $PORT --server.address 0.0.0.0`
+- Start command: `npm --prefix frontend run preview` (for serving built assets). For development: `npm --prefix frontend run dev`.
 - Set `API_BASE_URL` once frontend configuration is externalized.
 
 ## Azure App Service
@@ -70,9 +70,9 @@ uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 
 - Use Azure Files or a managed database for production persistence.
 
-## Streamlit Cloud
+## Frontend Hosting (Railway)
 
-Streamlit Cloud can host the frontend demo if the backend is deployed separately.
+Railway can host the frontend (built with Vite) while the backend runs as a separate Railway service.
 
 Limitations:
 

@@ -56,3 +56,8 @@ class AIService:
             logger.error(f"Error in document analysis or schema validation: {e}")
             # Raise exception so workflow engine can record job failure
             raise ValueError(f"AI Service failed to parse and validate output: {str(e)}")
+
+    async def generate_text_completion(self, prompt: str, system_instruction: str = "") -> str:
+        """Exposes general text completion from the active provider."""
+        return await self.provider.generate_text_completion(prompt, system_instruction)
+

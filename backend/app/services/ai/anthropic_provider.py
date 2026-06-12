@@ -56,7 +56,10 @@ class AnthropicProvider(AIProvider):
             "      \"description\": \"Item description\",\n"
             "      \"severity\": \"low | medium | high | critical\",\n"
             "      \"confidence_score\": 0.9,\n"
-            "      \"source_excerpt\": \"Verbatim sentence matching this item\"\n"
+            "      \"source_excerpt\": \"Verbatim sentence matching this item\",\n"
+            "      \"explain_why\": \"A detailed explanation of why this item matters in this context, outlining specific governance implications.\",\n"
+            "      \"suggested_actions\": \"Specific, contextual action steps to mitigate this item, formatted as a bulleted or numbered list.\",\n"
+            "      \"estimated_impact\": \"A quantitative or qualitative statement of estimated risk reduction impact (e.g., '65% reduction in compliance exposure').\"\n"
             "    }\n"
             "  ],\n"
             "  \"escalation_items\": [\n"
@@ -64,7 +67,10 @@ class AnthropicProvider(AIProvider):
             "      \"description\": \"Actionable escalation summary\",\n"
             "      \"severity\": \"low | medium | high | critical\",\n"
             "      \"source_excerpt\": \"Verbatim sentence matching this escalation\",\n"
-            "      \"confidence_score\": 0.85\n"
+            "      \"confidence_score\": 0.85,\n"
+            "      \"explain_why\": \"A detailed explanation of why this escalation is being raised, outlining specific governance implications.\",\n"
+            "      \"suggested_actions\": \"Specific, contextual action steps to resolve this escalation, formatted as a bulleted or numbered list.\",\n"
+            "      \"estimated_impact\": \"A quantitative or qualitative statement of estimated risk reduction impact (e.g., '80% reduction in program delivery risk').\"\n"
             "    }\n"
             "  ],\n"
             "  \"meeting_actions\": [\n"
@@ -129,3 +135,21 @@ class AnthropicProvider(AIProvider):
         except Exception as e:
             logger.error(f"Failed to parse JSON string: '{json_str[:200]}...' Error: {e}")
             raise ValueError(f"Invalid JSON returned by provider: {str(e)}")
+
+    async def generate_text_completion(self, prompt: str, system_instruction: str = "") -> str:
+        logger.info("Generating text completion using Anthropic Claude...")
+        try:
+            response = await self.client.messages.create(
+                model=self.model,
+                max_tokens=4000,
+                temperature=0.7,
+                system=system_instruction or "You are a professional enterprise governance advisor. Answer the user's questions clearly.",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return response.content[0].text
+        except Exception as e:
+            logger.error(f"Anthropic text completion failed: {e}")
+            raise RuntimeError(f"Anthropic completion failed: {str(e)}")
+

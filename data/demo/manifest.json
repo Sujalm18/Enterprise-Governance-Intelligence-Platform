@@ -2,31 +2,31 @@
   {
     "filename": "project_status_report_03_red.pdf",
     "source": "data\\regression\\corpus\\project_status_reports\\project_status_report_03_red.pdf",
-    "demo_use": "Upload through Streamlit Upload Center or API /api/upload"
+    "demo_use": "Upload through the React frontend upload center or API /api/upload"
   },
   {
     "filename": "raid_register_03.xlsx",
     "source": "data\\regression\\corpus\\raid_registers\\raid_register_03.xlsx",
-    "demo_use": "Upload through Streamlit Upload Center or API /api/upload"
+    "demo_use": "Upload through the React frontend upload center or API /api/upload"
   },
   {
     "filename": "steering_committee_report_05.pdf",
     "source": "data\\regression\\corpus\\governance_reports\\steering_committee_report_05.pdf",
-    "demo_use": "Upload through Streamlit Upload Center or API /api/upload"
+    "demo_use": "Upload through the React frontend upload center or API /api/upload"}
   },
   {
     "filename": "escalation_memo_01.pdf",
     "source": "data\\regression\\corpus\\escalation_memos\\escalation_memo_01.pdf",
-    "demo_use": "Upload through Streamlit Upload Center or API /api/upload"
+    "demo_use": "Upload through the React frontend upload center or API /api/upload"
   },
   {
     "filename": "meeting_minutes_09.docx",
     "source": "data\\regression\\corpus\\meeting_minutes\\meeting_minutes_09.docx",
-    "demo_use": "Upload through Streamlit Upload Center or API /api/upload"
+    "demo_use": "Upload through the React frontend upload center or API /api/upload"
   },
   {
     "filename": "hr_policy_02.pdf",
     "source": "data\\regression\\corpus\\generic_business_docs\\hr_policy_02.pdf",
-    "demo_use": "Upload through Streamlit Upload Center or API /api/upload"
+    "demo_use": "Upload through the React frontend upload center or API /api/upload"
   }
 ]

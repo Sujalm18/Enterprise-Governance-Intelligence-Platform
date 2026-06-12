@@ -1,22 +1,25 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, Route, Search, Send, Siren } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Route, Search, Send, Siren, ShieldAlert, UserCheck, Archive } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfidenceBadge } from "@/features/reports/ConfidenceBadge";
 import { StatusBadge } from "@/features/reports/StatusBadge";
-import { listEscalations, routeEscalation } from "@/lib/api/escalations";
+import { listEscalations, routeEscalation, assignEscalation, resolveEscalation, closeEscalation } from "@/lib/api/escalations";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { useRole } from "@/lib/context/RoleContext";
 import type { EscalationItemResponse, EscalationStatus } from "@/types/api";
 
 type StatusFilter = "all" | EscalationStatus;
 
 export function EscalationsPage() {
+  const { role, isGovLead, isManager } = useRole();
   const [status, setStatus] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
   const [routingTargets, setRoutingTargets] = useState<Record<number, string>>({});
+  const [assignees, setAssignees] = useState<Record<number, string>>({});
   const queryClient = useQueryClient();
 
   const params = status === "all" ? {} : { status };
@@ -33,6 +36,35 @@ export function EscalationsPage() {
       void queryClient.invalidateQueries({ queryKey: ["escalations"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["reports"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-events"] });
+    },
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: ({ id, assignedTo }: { id: number; assignedTo: string }) =>
+      assignEscalation(id, assignedTo),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["escalations"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-events"] });
+    },
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: (id: number) => resolveEscalation(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["escalations"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-events"] });
+    },
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: (id: number) => closeEscalation(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["escalations"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-events"] });
     },
   });
 
@@ -139,6 +171,9 @@ export function EscalationsPage() {
                 <EscalationCard
                   key={item.id}
                   item={item}
+                  role={role}
+                  isGovLead={isGovLead}
+                  isManager={isManager}
                   routingTarget={routingTargets[item.id] ?? item.routing_target ?? ""}
                   onRoutingTargetChange={(value) =>
                     setRoutingTargets((current) => ({ ...current, [item.id]: value }))
@@ -151,6 +186,22 @@ export function EscalationsPage() {
                   }
                   isRouting={routeMutation.isPending}
                   routeError={routeMutation.error}
+                  assigneeTarget={assignees[item.id] ?? item.assigned_to ?? ""}
+                  onAssigneeTargetChange={(value) =>
+                    setAssignees((current) => ({ ...current, [item.id]: value }))
+                  }
+                  onAssign={() =>
+                    assignMutation.mutate({
+                      id: item.id,
+                      assignedTo: (assignees[item.id] ?? item.assigned_to ?? "").trim(),
+                    })
+                  }
+                  isAssigning={assignMutation.isPending}
+                  assignError={assignMutation.error}
+                  onResolve={() => resolveMutation.mutate(item.id)}
+                  isResolving={resolveMutation.isPending}
+                  onClose={() => closeMutation.mutate(item.id)}
+                  isClosing={closeMutation.isPending}
                 />
               ))}
             </div>
@@ -163,29 +214,63 @@ export function EscalationsPage() {
 
 function EscalationCard({
   item,
+  role,
+  isGovLead,
+  isManager,
   routingTarget,
   onRoutingTargetChange,
   onRoute,
   isRouting,
   routeError,
+  assigneeTarget,
+  onAssigneeTargetChange,
+  onAssign,
+  isAssigning,
+  assignError,
+  onResolve,
+  isResolving,
+  onClose,
+  isClosing,
 }: {
   item: EscalationItemResponse;
+  role: string;
+  isGovLead: boolean;
+  isManager: boolean;
   routingTarget: string;
   onRoutingTargetChange: (value: string) => void;
   onRoute: () => void;
   isRouting: boolean;
   routeError: unknown;
+  assigneeTarget: string;
+  onAssigneeTargetChange: (value: string) => void;
+  onAssign: () => void;
+  isAssigning: boolean;
+  assignError: unknown;
+  onResolve: () => void;
+  isResolving: boolean;
+  onClose: () => void;
+  isClosing: boolean;
 }) {
   const canRoute = routingTarget.trim().length > 0 && !isRouting;
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-5">
+    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <StatusBadge status={item.status} />
             <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold capitalize text-slate-700 ring-1 ring-slate-200">
               {item.severity}
+            </span>
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-slate-200 ${
+              item.priority === "P1" ? "bg-red-50 text-red-700 ring-red-200" :
+              item.priority === "P2" ? "bg-amber-50 text-amber-700 ring-amber-200" :
+              item.priority === "P3" ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-slate-50 text-slate-700 ring-slate-200"
+            }`}>
+              {item.priority || "P4"}
+            </span>
+            <span className="inline-flex items-center justify-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-800 ring-1 ring-slate-200">
+              Score: {item.risk_score || 0}
             </span>
             <ConfidenceBadge score={item.confidence_score} />
           </div>
@@ -198,35 +283,181 @@ function EscalationCard({
               {item.source_excerpt}
             </blockquote>
           ) : null}
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+
+          {/* Remediation Plan */}
+          {item.remediation_plan ? (
+            <div className="mt-4 bg-blue-50/50 border border-blue-100 rounded-lg p-3.5 text-sm text-blue-950">
+              <span className="font-bold block text-[10px] uppercase text-blue-700 tracking-wider mb-1">Recommended Remediation Plan</span>
+              <p className="leading-relaxed font-medium">{item.remediation_plan}</p>
+              {item.expected_risk_reduction && (
+                <div className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-green-700">
+                  <span className="inline-flex items-center rounded bg-green-50 px-2 py-0.5 border border-green-200">
+                    Expected Reduction: {item.expected_risk_reduction}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {/* AI Contextual Insights */}
+          {(item.explain_why || item.suggested_actions || item.estimated_impact) ? (
+            <div className="mt-4 border border-indigo-100 rounded-xl p-4 bg-indigo-50/20 shadow-sm">
+              <span className="font-bold block text-[10px] uppercase text-indigo-700 tracking-wider mb-3 flex items-center gap-1.5">
+                <Siren className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
+                AI Contextual Insights
+              </span>
+              <div className="grid gap-3 md:grid-cols-3">
+                {item.explain_why && (
+                  <div className="bg-white/85 p-3 rounded-lg border border-indigo-50/50">
+                    <span className="font-bold block text-[10px] uppercase text-slate-500 tracking-wider mb-1">Why it matters</span>
+                    <p className="text-xs text-slate-700 leading-relaxed font-medium">{item.explain_why}</p>
+                  </div>
+                )}
+                {item.suggested_actions && (
+                  <div className="bg-white/85 p-3 rounded-lg border border-indigo-50/50">
+                    <span className="font-bold block text-[10px] uppercase text-slate-500 tracking-wider mb-1">Suggested actions</span>
+                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line font-medium">{item.suggested_actions}</p>
+                  </div>
+                )}
+                {item.estimated_impact && (
+                  <div className="bg-white/85 p-3 rounded-lg border border-indigo-50/50 flex flex-col justify-between">
+                    <div>
+                      <span className="font-bold block text-[10px] uppercase text-slate-500 tracking-wider mb-1">Estimated impact</span>
+                    </div>
+                    <div className="inline-flex w-max items-center gap-1 rounded bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700 border border-green-200 mt-2">
+                      {item.estimated_impact}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Ownership metadata block */}
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs bg-slate-50 p-2.5 rounded-md border border-slate-200/60 text-slate-600">
+            <div>
+              <span className="font-semibold text-slate-500 block">Raised By</span>
+              <span className="font-medium text-slate-800">{item.raised_by || "System / AI"}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-slate-500 block">Assigned To</span>
+              <span className="font-medium text-slate-800">{item.assigned_to || "Unassigned"}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-slate-500 block">Suggested Owner</span>
+              <span className="font-medium text-indigo-700 font-semibold">{item.suggested_owner_role || "Governance Lead"}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-slate-500 block">Resolved By</span>
+              <span className="font-medium text-slate-800">{item.resolved_by || "Unresolved"}</span>
+            </div>
+            <div>
+              <span className="font-semibold text-slate-500 block">Target Routing</span>
+              <span className="font-medium text-slate-800">{item.routing_target || "None"}</span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
             <span>Created {formatDate(item.created_at)}</span>
-            {item.routing_target ? <span>Routed to {item.routing_target}</span> : null}
             <Link className="font-semibold text-blue-700 hover:text-blue-800" to={`/reports/${item.report_id}`}>
               Open report
             </Link>
+            {item.explainability_trace && (
+              <span className="border-l border-slate-200 pl-3">
+                <span className="font-semibold text-slate-400">Trace:</span>{" "}
+                <span className="text-slate-600">
+                  {typeof item.explainability_trace === "object" && item.explainability_trace !== null
+                    ? (item.explainability_trace.playbook
+                      ? `Playbook: ${item.explainability_trace.playbook}`
+                      : `Heuristics (${item.explainability_trace.recommendation_source})`)
+                    : (typeof item.explainability_trace === "string" && (item.explainability_trace as string).includes("playbook")
+                      ? "Playbook Engine matched" 
+                      : "AI Heuristic matched")}
+                </span>
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="w-full rounded-md border border-slate-200 bg-slate-50 p-4 lg:w-80">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500" htmlFor={`route-${item.id}`}>
-            Routing target
-          </label>
-          <input
-            id={`route-${item.id}`}
-            value={routingTarget}
-            onChange={(event) => onRoutingTargetChange(event.target.value)}
-            placeholder="e.g. CIO, PMO, Steering Committee"
-            className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-          <Button className="mt-3 w-full" disabled={!canRoute} onClick={onRoute}>
-            <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-            {isRouting ? "Routing..." : "Route escalation"}
-          </Button>
-          {routeError ? (
-            <p className="mt-2 text-xs text-red-600">
-              {routeError instanceof Error ? routeError.message : "Escalation routing failed."}
-            </p>
-          ) : null}
+        <div className="w-full rounded-md border border-slate-200 bg-slate-50 p-4 lg:w-80 space-y-4">
+          <div className="text-xs font-bold text-slate-500 border-b border-slate-200 pb-1.5 flex justify-between items-center">
+            <span>WORKFLOW ACTIONS</span>
+            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">{role}</span>
+          </div>
+
+          {/* 1. Routing action (Manager or Governance Lead) */}
+          {(isManager || isGovLead) && (item.status === "OPEN" || item.status === "ASSIGNED" || item.status === "open" || item.status === "assigned") && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500" htmlFor={`route-${item.id}`}>
+                Routing target
+              </label>
+              <div className="flex gap-1">
+                <input
+                  id={`route-${item.id}`}
+                  value={routingTarget}
+                  onChange={(event) => onRoutingTargetChange(event.target.value)}
+                  placeholder="e.g. CIO, PMO, Committee"
+                  className="h-8 flex-1 rounded-md border border-slate-300 bg-white px-2.5 text-xs outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                />
+                <Button size="sm" className="h-8 text-xs px-2.5" disabled={!canRoute} onClick={onRoute}>
+                  <Send className="h-3 w-3" />
+                </Button>
+              </div>
+              {!!routeError && (
+                <p className="text-[10px] text-red-600">
+                  {routeError instanceof Error ? routeError.message : "Routing failed"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 2. Assign action (Governance Lead only) */}
+          {isGovLead && (item.status !== "RESOLVED" && item.status !== "CLOSED" && item.status !== "resolved" && item.status !== "closed") && (
+            <div className="space-y-1.5 pt-2 border-t border-slate-200/60">
+              <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500" htmlFor={`assign-${item.id}`}>
+                Assign Stakeholder
+              </label>
+              <div className="flex gap-1">
+                <input
+                  id={`assign-${item.id}`}
+                  value={assigneeTarget}
+                  onChange={(event) => onAssigneeTargetChange(event.target.value)}
+                  placeholder="e.g. Governance Lead"
+                  className="h-8 flex-1 rounded-md border border-slate-300 bg-white px-2.5 text-xs outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                />
+                <Button size="sm" variant="secondary" className="h-8 text-xs px-2.5 border border-slate-300" disabled={assigneeTarget.trim().length === 0 || isAssigning} onClick={onAssign}>
+                  <UserCheck className="h-3 w-3 text-slate-700" />
+                </Button>
+              </div>
+              {!!assignError && (
+                <p className="text-[10px] text-red-600">
+                  {assignError instanceof Error ? assignError.message : "Assignment failed"}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 3. Resolve & Close actions (Governance Lead only) */}
+          {isGovLead && (item.status !== "RESOLVED" && item.status !== "CLOSED" && item.status !== "resolved" && item.status !== "closed") && (
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60">
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-1.5 h-8" disabled={isResolving} onClick={onResolve}>
+                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                Resolve
+              </Button>
+              <Button size="sm" variant="default" className="bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold py-1.5 h-8" disabled={isClosing} onClick={onClose}>
+                <Archive className="mr-1 h-3.5 w-3.5" />
+                Close
+              </Button>
+            </div>
+          )}
+
+          {/* 4. Access warning (Analyst role) */}
+          {!isManager && !isGovLead && (
+            <div className="text-[11px] text-slate-500 bg-slate-100 rounded p-2 text-center">
+              <ShieldAlert className="h-3.5 w-3.5 inline mr-1 text-slate-400" />
+              Only Managers and Governance Leads can perform workflow actions.
+            </div>
+          )}
         </div>
       </div>
     </article>

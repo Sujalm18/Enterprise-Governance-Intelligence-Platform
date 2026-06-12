@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, RotateCcw } from "lucide-react";
+import { CheckCircle2, RotateCcw, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { reviewGovernanceReport } from "@/lib/api/review";
 import { queryKeys } from "@/lib/api/queryKeys";
+import { useRole } from "@/lib/context/RoleContext";
 import type { ReportReviewRequest } from "@/types/api";
 
 type ReviewFormProps = {
@@ -11,8 +12,9 @@ type ReviewFormProps = {
 };
 
 export function ReviewForm({ reportId }: ReviewFormProps) {
+  const { role, isManager } = useRole();
   const queryClient = useQueryClient();
-  const [reviewer, setReviewer] = useState("reviewer_user");
+  const [reviewer, setReviewer] = useState("manager_user");
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewStatus, setReviewStatus] =
     useState<ReportReviewRequest["review_status"]>("approved");
@@ -28,13 +30,23 @@ export function ReviewForm({ reportId }: ReviewFormProps) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.reports.pendingReview });
       void queryClient.invalidateQueries({ queryKey: ["reports"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-events"] });
     },
   });
 
-  const canSubmit = reviewer.trim().length > 0 && !reviewMutation.isPending;
+  const canSubmit = isManager && reviewer.trim().length > 0 && !reviewMutation.isPending;
 
   return (
     <div className="w-full max-w-xl rounded-md border border-slate-200 bg-slate-50 p-4">
+      {!isManager ? (
+        <div className="mb-4 flex items-start gap-2.5 rounded-md bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">
+          <ShieldAlert className="h-4 w-4 mt-0.5 text-amber-600 flex-shrink-0" />
+          <div>
+            <span className="font-semibold">Review Disabled:</span> You are viewing as <span className="font-bold">{role}</span>. Only Managers can review reports.
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
         <label className="block">
           <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -43,7 +55,8 @@ export function ReviewForm({ reportId }: ReviewFormProps) {
           <input
             value={reviewer}
             onChange={(event) => setReviewer(event.target.value)}
-            className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            disabled={!isManager}
+            className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500"
           />
         </label>
 
@@ -56,7 +69,8 @@ export function ReviewForm({ reportId }: ReviewFormProps) {
             onChange={(event) =>
               setReviewStatus(event.target.value as ReportReviewRequest["review_status"])
             }
-            className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm"
+            disabled={!isManager}
+            className="mt-1 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm disabled:bg-slate-100 disabled:text-slate-500"
           >
             <option value="approved">Approve</option>
             <option value="changes_requested">Request changes</option>
@@ -72,7 +86,8 @@ export function ReviewForm({ reportId }: ReviewFormProps) {
           value={reviewNotes}
           onChange={(event) => setReviewNotes(event.target.value)}
           rows={3}
-          className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          disabled={!isManager}
+          className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500"
           placeholder="Add reviewer notes for audit traceability..."
         />
       </label>
@@ -92,7 +107,7 @@ export function ReviewForm({ reportId }: ReviewFormProps) {
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button
           variant="outline"
-          disabled={reviewMutation.isPending}
+          disabled={!isManager || reviewMutation.isPending}
           onClick={() => {
             setReviewNotes("");
             setReviewStatus("approved");

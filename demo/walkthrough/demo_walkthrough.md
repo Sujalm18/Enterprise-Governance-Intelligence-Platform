@@ -48,5 +48,5 @@ Emphasize:
 - governance ontology
 - mixed-format ingestion
 - regression framework
-- deployment-ready FastAPI + Streamlit architecture
+- deployment-ready FastAPI + React architecture
 

@@ -39,7 +39,7 @@ Since this app is designed for internal enterprise deployment on Windows environ
    ```
 
 ### Step B: Service Configuration (NSSM - Non-Sucking Service Manager)
-Use NSSM to register both FastAPI (backend) and Streamlit (frontend) as Windows Background Services.
+Use NSSM to register both FastAPI (backend) and the frontend (as a Node/Vite service) as Windows Background Services. Note: legacy Streamlit artifacts are retained for historical reference.
 
 1. **Backend Service Registration**:
    - Download NSSM and run: `nssm install GovCopilotBackend`
@@ -49,12 +49,12 @@ Use NSSM to register both FastAPI (backend) and Streamlit (frontend) as Windows 
      - **Arguments**: `-m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000`
    - Click **Install Service**.
 
-2. **Frontend Service Registration**:
+2. **Frontend Service Registration (React)**:
    - Run: `nssm install GovCopilotFrontend`
    - Configure parameters:
-     - **Path**: `C:\Users\10651.PHNTECHNOLOGY\Desktop\Projects\Enterprise AI\.venv\Scripts\python.exe`
-     - **Startup directory**: `C:\Users\10651.PHNTECHNOLOGY\Desktop\Projects\Enterprise AI`
-     - **Arguments**: `-m streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0`
+     - **Path**: `C:\Program Files\nodejs\npm.cmd` (or your path to npm)
+     - **Startup directory**: `C:\Users\10651.PHNTECHNOLOGY\Desktop\Projects\Enterprise AI\frontend`
+     - **Arguments**: `run dev` (or `run preview` for built assets)
    - Click **Install Service**.
 
 3. **Start Services**:
@@ -63,6 +63,12 @@ Use NSSM to register both FastAPI (backend) and Streamlit (frontend) as Windows 
      Start-Service GovCopilotBackend
      Start-Service GovCopilotFrontend
      ```
+
+### Step C: Legacy MVP Interface (Optional)
+If you wish to host the original Streamlit prototype:
+- Run: `nssm install GovCopilotLegacy`
+- **Path**: `C:\Users\10651.PHNTECHNOLOGY\Desktop\Projects\Enterprise AI\.venv\Scripts\python.exe`
+- **Arguments**: `-m streamlit run frontend/app.py --server.port 8501 --server.address 0.0.0.0`
 
 ---
 
@@ -73,7 +79,7 @@ If migrating to Linux, use `systemd` and `Nginx`.
 ### Systemd Service Configuration (`/etc/systemd/system/gov_backend.service`):
 ```ini
 [Unit]
-Description=Governance Copilot Backend API
+Description=Enterprise Governance Backend API
 After=network.target
 
 [Service]
@@ -86,12 +92,14 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-Configure a similar systemd file for Streamlit, then run:
+Configure a similar systemd file for the React frontend (using a Node server or Vite preview), then run:
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable gov_backend.service gov_frontend.service
 sudo systemctl start gov_backend.service gov_frontend.service
 ```
+
+*(Note: If you still need the Legacy MVP Interface, you can configure a separate `gov_legacy.service` running Streamlit).*
 
 ---
 

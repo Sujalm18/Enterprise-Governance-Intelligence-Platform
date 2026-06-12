@@ -1,0 +1,29 @@
+# Task Checklist — Release Prep v1.0.0-rc1
+
+- `[x]` Subsystem 1: Repository Restructuring & Cleanup
+  - `[x]` Move `deployment/` containing `docker/` and `railway/` into `scripts/deployment/`
+  - `[x]` Create `docs/screenshots/` and place empty/placeholder files: `dashboard.png`, `executive-hub.png`, `mitigations.png`, `notifications.png`, `reports.png`, `escalations.png`, `board-pack.png`, `architecture.png`
+  - `[x]` Delete root-level `diff.patch` (if present)
+  - `[x]` Delete all python cache folders (`__pycache__`, `.pytest_cache`)
+  - `[x]` Delete frontend build/dist folders if present
+- `[x]` Subsystem 2: Architecture & Domain Documentation
+  - `[x]` Create/Update `docs/architecture/system_design.md` with High-Level and ER Mermaid diagrams
+  - `[x]` Create `docs/architecture/domain_model.md` mapping entities and relationships
+  - `[x]` Create `docs/architecture/phase7_production_readiness.md` documenting future planned scopes
+- `[x]` Subsystem 3: Testing & Release Documentation
+  - `[x]` Create `docs/testing/test_summary.md` detailing the automated test suites
+  - `[x]` Create `docs/releases/phase6_release_summary.md` summarizing business values and phase achievements
+  - `[x]` Create `docs/releases/demo_walkthrough.md` mapping step-by-step user journeys
+  - `[x]` Create `docs/releases/known_limitations.md` detailing simulated or sqlite constraints
+- `[x]` Subsystem 4: Version, Readme, and Metadata Overhaul
+  - `[x]` Create VERSION.md detailing v1.0.0-rc1 status
+  - `[x]` Create/Update `CONTRIBUTING.md` guide
+  - `[x]` Overhaul `README.md` to a professional layout
+  - `[x]` Overhaul `ROADMAP.md` documenting completed phases and planned Phase 7
+  - `[x]` Overhaul `CHANGELOG.md` with structured versions
+- `[x]` Subsystem 5: Verification & Packaging
+  - `[x]` Verify seeder dataset generates successfully on POST `/api/demo-data/generate`
+  - `[x]` Run test suite `.venv\Scripts\python -m pytest` and make sure 100% of tests pass
+  - `[x]` Run typecheck `npm.cmd run typecheck` and ensure 0 errors
+  - `[x]` Verify git status output is clean of unintended artifacts
+  - `[x]` Perform git tagging `v1.0.0-rc1` and release packaging

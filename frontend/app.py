@@ -199,9 +199,16 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ─── Main Page ─────────────────────────────────────────────────────────────────
+st.info("""
+**Legacy MVP Interface**
+
+This interface represents the original Streamlit-based prototype used during the early development of the platform. 
+The primary platform is now the React + FastAPI application.
+""", icon="ℹ️")
+
 st.markdown("""
 <div class="main-header">
-    <h1>🛡️ Enterprise AI Governance & Operations Copilot</h1>
+    <h1>🛡️ Enterprise Governance Intelligence Platform</h1>
     <p>
         Automated document ingestion, RAID extraction, escalation routing,
         and governance reporting — powered by AI with human-in-the-loop oversight.

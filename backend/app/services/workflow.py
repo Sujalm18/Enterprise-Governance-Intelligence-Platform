@@ -1,3 +1,4 @@
+import json
 import logging
 import traceback
 from datetime import datetime
@@ -7,13 +8,14 @@ from sqlalchemy.orm import Session
 from backend.app.config import settings
 from backend.app.database import SessionLocal
 from backend.app.models import (
-    Document, WorkflowJob, WorkflowStatus, GovernanceReport, RaidItem, EscalationItem, MeetingAction, AuditLog
+    Document, WorkflowJob, WorkflowStatus, GovernanceReport, RaidItem, EscalationItem, MeetingAction, AuditLog, Notification
 )
 from backend.app.services.ingestion.parser import parse_file
 from backend.app.services.ingestion.cleaner import clean_text
 from backend.app.services.ingestion.chunker import chunk_text
 from backend.app.services.rag.retrieval import RetrievalService
 from backend.app.services.ai.ai_service import AIService
+from backend.app.services.governance.playbook import PlaybookEngine
 
 logger = logging.getLogger("governance_copilot.services.workflow")
 
@@ -134,34 +136,235 @@ async def process_document_pipeline(document_id: int, job_id: int) -> None:
             is_latest=True,
             document_type=ai_results.get("document_type", "generic_business_document"),
             classification_confidence=ai_results.get("classification_confidence", 0.5),
-            governance_relevance=ai_results.get("governance_relevance", "medium")
+            governance_relevance=ai_results.get("governance_relevance", "medium"),
+            
+            # Workflow Automated Assignment
+            created_by="Analyst",
+            assigned_to="Manager",
+            status="PENDING_MANAGER_REVIEW",
+            tenant_id=document.tenant_id
         )
         db.add(report)
         db.commit()  # Committing allows us to obtain report.id
         
+        # Create notification for Manager
+        notif_report = Notification(
+            severity="MEDIUM",
+            notification_type="REPORT_PENDING_REVIEW",
+            title="New Governance Report Pending Review",
+            message=f"Governance Report V{next_version} for '{report.filename}' is pending review.",
+            recipient_role="Manager",
+            related_entity_type="report",
+            related_entity_id=report.id,
+            read_status=False,
+            tenant_id=document.tenant_id
+        )
+        db.add(notif_report)
+        db.commit()
+        
         # Write RAID Items
+        raid_items_to_create = []
         for r in ai_results["raid_items"]:
+            # Enrich RAID item with deterministic Playbook Engine
+            enriched_r = PlaybookEngine.enrich_raid_item(r, relevance=report.governance_relevance)
+            
             raid_item = RaidItem(
                 report_id=report.id,
-                type=r["type"],
-                description=r["description"],
-                severity=r["severity"],
-                confidence_score=r["confidence_score"],
-                source_excerpt=r["source_excerpt"]
+                type=enriched_r["type"],
+                description=enriched_r["description"],
+                severity=enriched_r["severity"],
+                confidence_score=enriched_r["confidence_score"],
+                source_excerpt=enriched_r["source_excerpt"],
+                
+                # Phase 2 Decision Support columns
+                recommended_mitigations=json.dumps(enriched_r["recommended_mitigations"]) if isinstance(enriched_r["recommended_mitigations"], list) else enriched_r["recommended_mitigations"],
+                implementation_effort=enriched_r["implementation_effort"],
+                expected_risk_reduction=enriched_r["expected_risk_reduction"],
+                recommended_priority=enriched_r["recommended_priority"],
+                suggested_owner_role=enriched_r["suggested_owner_role"],
+                priority=enriched_r["priority"],
+                risk_score=enriched_r["risk_score"],
+                current_risk_score=enriched_r["risk_score"], # Initial residual risk is equal to original risk
+                explainability_trace=enriched_r["explainability_trace"],
+                
+                # Priority 1 & 5 Additions
+                explain_why=enriched_r.get("explain_why"),
+                suggested_actions=enriched_r.get("suggested_actions"),
+                estimated_impact=enriched_r.get("estimated_impact"),
+                tenant_id=document.tenant_id
             )
             db.add(raid_item)
+            raid_items_to_create.append((raid_item, enriched_r))
+            
+        db.commit() # Commit to get raid_item.id values
+        
+        try:
+            from backend.app.services.integrations import trigger_governance_alerts
+            for raid_item, _ in raid_items_to_create:
+                if raid_item.priority == "P1":
+                    trigger_governance_alerts(
+                        db=db,
+                        tenant_id=document.tenant_id or 1,
+                        title=f"New P1 Risk Identified: {raid_item.type.upper()}",
+                        message=f"A new P1 {raid_item.type} was detected: '{raid_item.description}'",
+                        severity="high",
+                        details=f"Suggested Owner Role: {raid_item.suggested_owner_role}\nRisk Score: {raid_item.risk_score}"
+                    )
+        except Exception as alert_err:
+            logger.error(f"Failed to trigger RAID alert webhooks: {alert_err}")
+        
+        # Now create MitigationTasks for each recommendation
+        from datetime import timedelta
+        for raid_item, enriched_r in raid_items_to_create:
+            mitigations = enriched_r.get("recommended_mitigations") or []
+            if isinstance(mitigations, str):
+                try:
+                    mitigations = json.loads(mitigations)
+                except Exception:
+                    mitigations = [mitigations]
+                    
+            # Only create for risk and issue items
+            if raid_item.type.lower() in {"risk", "issue"}:
+                for mit in mitigations:
+                    # Default effectiveness based on priority
+                    p = raid_item.priority or "P4"
+                    eff_map = {"P1": 30, "P2": 20, "P3": 15, "P4": 10}
+                    eff = eff_map.get(p, 20)
+                    
+                    # Target date in 14 days
+                    target_dt = (datetime.utcnow() + timedelta(days=14)).strftime("%Y-%m-%d")
+                    
+                    # Create MitigationTask
+                    from backend.app.models import MitigationTask
+                    task = MitigationTask(
+                        title=mit,
+                        description=f"Automatically generated mitigation task for: {raid_item.description}",
+                        related_raid_item_id=raid_item.id,
+                        related_escalation_id=None,
+                        owner_role=raid_item.suggested_owner_role or "Analyst",
+                        owner_name=None,
+                        priority=p,
+                        risk_score=raid_item.risk_score,
+                        target_date=target_dt,
+                        sla_status="ON_TRACK",
+                        status="PLANNED",
+                        completion_percentage=0,
+                        effectiveness=eff,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow(),
+                        tenant_id=document.tenant_id
+                    )
+                    db.add(task)
+                    db.commit() # get task.id
+                    
+                    # Create notification for Mitigation owner
+                    notif_task = Notification(
+                        severity="LOW" if p in ("P3", "P4") else "MEDIUM",
+                        notification_type="MITIGATION_ASSIGNED",
+                        title="New Mitigation Task Assigned",
+                        message=f"Mitigation task '{task.title}' has been assigned to you.",
+                        recipient_role=task.owner_role,
+                        related_entity_type="mitigation",
+                        related_entity_id=task.id,
+                        read_status=False,
+                        tenant_id=document.tenant_id
+                    )
+                    db.add(notif_task)
+                    db.commit()
+                    
+                    # Log Audit Event
+                    audit_task = AuditLog(
+                        document_id=document.id,
+                        governance_report_id=report.id,
+                        event="MITIGATION_CREATED",
+                        user="system",
+                        user_role="Analyst",
+                        action="mitigation creation",
+                        entity_type="mitigation",
+                        entity_id=task.id,
+                        details=f"Mitigation task '{task.title[:60]}' created and assigned to {task.owner_role}.",
+                        tenant_id=document.tenant_id
+                    )
+                    db.add(audit_task)
+                    db.commit()
             
         # Write Escalations
         for esc in ai_results["escalation_items"]:
+            # Enrich Escalation item with deterministic Playbook Engine
+            enriched_esc = PlaybookEngine.enrich_escalation_item(esc, relevance=report.governance_relevance)
+            
             escalation_item = EscalationItem(
                 report_id=report.id,
-                description=esc["description"],
-                severity=esc["severity"],
-                status="open",
-                source_excerpt=esc["source_excerpt"],
-                confidence_score=esc["confidence_score"]
+                description=enriched_esc["description"],
+                severity=enriched_esc["severity"],
+                status="ASSIGNED",
+                routing_target="Governance Lead",
+                source_excerpt=enriched_esc["source_excerpt"],
+                confidence_score=enriched_esc["confidence_score"],
+                
+                # Workflow Automated Assignment
+                raised_by="Analyst",
+                assigned_to="Governance Lead",
+                
+                # Phase 2 Decision Support columns
+                remediation_plan=enriched_esc["remediation_plan"],
+                expected_risk_reduction=enriched_esc["expected_risk_reduction"],
+                priority=enriched_esc["priority"],
+                suggested_owner_role=enriched_esc["suggested_owner_role"],
+                risk_score=enriched_esc["risk_score"],
+                explainability_trace=enriched_esc["explainability_trace"],
+                
+                # Priority 1 & 5 Additions
+                explain_why=enriched_esc.get("explain_why"),
+                suggested_actions=enriched_esc.get("suggested_actions"),
+                estimated_impact=enriched_esc.get("estimated_impact"),
+                tenant_id=document.tenant_id
             )
             db.add(escalation_item)
+            db.commit() # Commit to get escalation_item.id
+            
+            try:
+                from backend.app.services.integrations import trigger_governance_alerts
+                if escalation_item.severity in ("critical", "high") or escalation_item.priority == "P1":
+                    trigger_governance_alerts(
+                        db=db,
+                        tenant_id=document.tenant_id or 1,
+                        title="Critical Escalation Raised",
+                        message=f"Escalation item raised: '{escalation_item.description}'",
+                        severity="critical",
+                        details=f"Routing target: {escalation_item.routing_target}\nSeverity: {escalation_item.severity.upper()}"
+                    )
+            except Exception as alert_err:
+                logger.error(f"Failed to trigger escalation alert webhooks: {alert_err}")
+
+            # Create notification for Governance Lead
+            notif_esc = Notification(
+                severity="HIGH" if escalation_item.severity in ("critical", "high") else "MEDIUM",
+                notification_type="ESCALATION_ASSIGNED",
+                title="New Escalation Assigned",
+                message=f"New escalation item assigned to you: '{escalation_item.description[:100]}'.",
+                recipient_role="Governance Lead",
+                related_entity_type="escalation",
+                related_entity_id=escalation_item.id,
+                read_status=False,
+                tenant_id=document.tenant_id
+            )
+            db.add(notif_esc)
+            db.commit()
+            
+            # Log Escalation Creation Event
+            audit_esc = AuditLog(
+                document_id=document.id,
+                governance_report_id=report.id,
+                event="Escalation Created",
+                user="system",
+                user_role="Analyst",
+                action="escalation creation",
+                entity_type="escalation",
+                entity_id=escalation_item.id,
+                details=f"Escalation item created and assigned to Governance Lead. Description: {esc['description'][:100]}"
+            )
+            db.add(audit_esc)
             
         # Write Meeting Actions
         for action in ai_results.get("meeting_actions", []):
@@ -185,7 +388,11 @@ async def process_document_pipeline(document_id: int, job_id: int) -> None:
             governance_report_id=report.id,
             event="Review Pending",
             user="system",
-            details=f"Governance Report V{next_version} created. Review Queue updated."
+            user_role="Analyst",
+            action="AI report generation",
+            entity_type="report",
+            entity_id=report.id,
+            details=f"Governance Report V{next_version} generated automatically by AI and assigned to Manager."
         )
         db.add(audit_success)
         

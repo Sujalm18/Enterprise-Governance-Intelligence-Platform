@@ -1,5 +1,7 @@
 # React Migration Blueprint
 
+> Note: Migration to React + Vite + TypeScript is complete; this document remains as a historical blueprint and mapping reference.
+
 ## Objective
 
 Migrate the presentation layer from Streamlit to a modern React, TypeScript, Vite, Tailwind CSS, and shadcn/ui frontend while preserving the FastAPI backend, AI extraction engine, OCR pipeline, governance ontology, database models, regression framework, and public API behavior.

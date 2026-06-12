@@ -105,3 +105,77 @@ async def test_workflow_pipeline_execution(test_db, monkeypatch):
             except Exception:
                 pass
 
+
+@pytest.mark.asyncio
+async def test_workflow_playbook_enrichment(test_db, monkeypatch):
+    """Verifies that the PlaybookEngine matches, enriches, and stores RAID/Escalation items correctly in the workflow."""
+    import json
+    from backend.app.models import RaidItem, EscalationItem
+
+    test_engine = test_db.get_bind()
+    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+    monkeypatch.setattr(database_module, "SessionLocal", TestSessionLocal)
+    monkeypatch.setattr(workflow_module, "SessionLocal", TestSessionLocal)
+
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w", encoding="utf-8") as f:
+        # Vendor Dependency (playbook)
+        f.write(
+            "Risks:\n"
+            "- Company XYZ has a massive vendor dependency on AWS for cloud supplier hosting.\n"
+            "- We have a minor testing concern that is low priority.\n\n"
+            "Escalations:\n"
+            "- Vendor billing dispute requires executive review."
+        )
+        temp_path = f.name
+
+    try:
+        doc = Document(filename=temp_path, type="txt", status=WorkflowStatus.UPLOADED)
+        test_db.add(doc)
+        test_db.commit()
+
+        job = WorkflowJob(document_id=doc.id, status=WorkflowStatus.UPLOADED, logs="")
+        test_db.add(job)
+        test_db.commit()
+
+        await workflow_module.process_document_pipeline(document_id=doc.id, job_id=job.id)
+
+        verify_db = TestSessionLocal()
+        try:
+            report = verify_db.query(GovernanceReport).filter(GovernanceReport.document_id == doc.id).first()
+            assert report is not None
+            
+            raid_items = verify_db.query(RaidItem).filter(RaidItem.report_id == report.id).all()
+            assert len(raid_items) > 0
+            
+            for item in raid_items:
+                assert item.priority in {"P1", "P2", "P3", "P4"}
+                assert item.risk_score >= 0
+                assert item.explainability_trace is not None
+                
+                # Check explainability trace structure
+                trace = json.loads(item.explainability_trace)
+                assert "recommendation_source" in trace
+                assert "evidence" in trace
+                
+            escalations = verify_db.query(EscalationItem).filter(EscalationItem.report_id == report.id).all()
+            for esc in escalations:
+                assert esc.priority in {"P1", "P2", "P3", "P4"}
+                assert esc.risk_score >= 0
+                assert esc.remediation_plan is not None
+                assert esc.expected_risk_reduction in {"Low", "Medium", "High"}
+                assert esc.suggested_owner_role in {"Analyst", "Manager", "Governance Lead"}
+                
+                trace_esc = json.loads(esc.explainability_trace)
+                assert "recommendation_source" in trace_esc
+                
+        finally:
+            verify_db.close()
+    finally:
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
+

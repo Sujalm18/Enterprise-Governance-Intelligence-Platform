@@ -9,7 +9,7 @@ Enterprise Governance Intelligence Platform is an AI engineering portfolio proje
 - Reconstructs ontology-aware governance entities.
 - Extracts RAID items, meeting actions, and escalations with confidence scores.
 - Suppresses false positives from generic policy and business documents.
-- Provides a Streamlit review UI and FastAPI backend.
+- Provides a React review UI (Vite + TypeScript) and FastAPI backend.
 - Runs an enterprise-style regression corpus.
 
 ## Engineering Highlights

@@ -26,3 +26,32 @@ export function routeEscalation(
     data: payload,
   });
 }
+
+export function assignEscalation(
+  id: number | string,
+  assignedTo: string,
+): Promise<EscalationItemResponse> {
+  return request<EscalationItemResponse>({
+    method: "PATCH",
+    url: `${endpoints.escalations}/${id}/assign`,
+    data: { assigned_to: assignedTo },
+  });
+}
+
+export function resolveEscalation(
+  id: number | string,
+): Promise<EscalationItemResponse> {
+  return request<EscalationItemResponse>({
+    method: "PATCH",
+    url: `${endpoints.escalations}/${id}/resolve`,
+  });
+}
+
+export function closeEscalation(
+  id: number | string,
+): Promise<EscalationItemResponse> {
+  return request<EscalationItemResponse>({
+    method: "PATCH",
+    url: `${endpoints.escalations}/${id}/close`,
+  });
+}

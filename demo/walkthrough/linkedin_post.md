@@ -8,7 +8,7 @@ The most interesting engineering challenge was precision. A simple keyword pipel
 
 Highlights:
 
-- FastAPI backend and Streamlit review UI
+- FastAPI backend and React review UI
 - OCR-ready ingestion pipeline
 - Governance taxonomy and ontology-aware parsing
 - Semantic deduplication and false-positive suppression

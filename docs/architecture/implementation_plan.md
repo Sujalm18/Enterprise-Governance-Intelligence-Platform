@@ -176,7 +176,7 @@ Includes:
 - `GET /governance/escalations`
 - `POST /governance/escalations/{id}/route` -> Updates route target and writes to `AuditLog`.
 
-#### 7. Frontend UI Pages (Streamlit)
+#### 7. Frontend UI Pages (React)
 
 ##### [NEW] [app.py](file:///c:/Users/10651.PHNTECHNOLOGY/Desktop/Projects/Enterprise%20AI/frontend/app.py)
 Configures high-end Dark/Steel Blue CSS style, custom fonts, side navigation, and simulated role selector (Analyst vs. Reviewer).

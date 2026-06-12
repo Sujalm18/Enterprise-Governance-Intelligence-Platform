@@ -40,6 +40,14 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
+apiClient.interceptors.request.use((config) => {
+  const role = localStorage.getItem("user_role") || "Analyst";
+  const tenantId = localStorage.getItem("tenant_id") || "1";
+  config.headers["X-User-Role"] = role;
+  config.headers["X-Tenant-ID"] = tenantId;
+  return config;
+});
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiErrorPayload>) => {

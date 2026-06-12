@@ -14,6 +14,7 @@ import { MeetingActionsPanel } from "@/features/reports/MeetingActionsPanel";
 import { ProcessingMetricsPanel } from "@/features/reports/ProcessingMetricsPanel";
 import { RaidItemsTable } from "@/features/reports/RaidItemsTable";
 import { StatusBadge } from "@/features/reports/StatusBadge";
+import { GovernanceWorkflowPanel } from "@/features/reports/GovernanceWorkflowPanel";
 
 export function ReportDetailPage() {
   const { reportId } = useParams();
@@ -85,6 +86,7 @@ export function ReportDetailPage() {
             <MeetingActionsPanel actions={report.meeting_actions} />
           </div>
           <div className="space-y-6">
+            <GovernanceWorkflowPanel report={report} />
             <ProcessingMetricsPanel report={report} />
             <ExplainabilityPanel report={report} />
           </div>

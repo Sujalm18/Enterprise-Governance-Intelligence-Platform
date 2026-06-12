@@ -10,4 +10,23 @@ export const endpoints = {
   dashboardCharts: "/api/governance/dashboard/charts",
   escalations: "/api/governance/escalations",
   routeEscalation: (id: number | string) => `/api/governance/escalations/${id}/route`,
+  mitigations: "/api/mitigations",
+  mitigation: (id: number | string) => `/api/mitigations/${id}`,
+  verifyMitigation: (id: number | string) => `/api/mitigations/${id}/verify`,
+  reopenMitigation: (id: number | string) => `/api/mitigations/${id}/reopen`,
+  notifications: "/api/notifications",
+  readNotification: (id: number | string) => `/api/notifications/${id}/read`,
+  readAllNotifications: "/api/notifications/read-all",
+  inbox: "/api/inbox",
+  generateDemoData: "/api/demo-data/generate",
+  // Phase 6 intelligence
+  maturity: "/api/governance/maturity",
+  healthExplanations: "/api/governance/health-explanations",
+  executivePriorities: "/api/governance/executive-priorities",
+  rootCauseAnalytics: "/api/governance/root-cause-analytics",
+  portfolioRecommendations: "/api/governance/portfolio-recommendations",
+  trends: "/api/governance/trends",
+  executiveBriefing: "/api/governance/executive-briefing",
+  copilot: "/api/governance/copilot",
 } as const;
+

@@ -67,13 +67,13 @@ Expected response:
 healthy
 ```
 
-## Legacy Streamlit Files
+## Legacy MVP Interface
 
-The repository still contains legacy Streamlit files for historical compatibility:
+The Legacy MVP Interface remains in the repository for historical reference. The primary frontend has migrated to React + Vite + TypeScript. The React frontend (in `frontend/`) is used for both local development and Railway deployments. Legacy files include:
 
-- `app.py`
-- `config.py`
-- `pages/`
+- `app.py` (historical)
+- `config.py` (historical)
+- `pages/` (historical Streamlit pages)
 
-The Railway frontend deployment uses the React application and ignores legacy Streamlit files through `.dockerignore`.
+Railway and the Docker build ignore these legacy Streamlit artifacts; do not rely on them for current development or deployments.
 

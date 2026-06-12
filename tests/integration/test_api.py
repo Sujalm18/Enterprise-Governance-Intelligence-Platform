@@ -25,17 +25,24 @@ def fixture_client():
     # Seed mock user
     db.add(User(username="test_reviewer", role="reviewer"))
     db.commit()
+    db.close()
     
-    # Define dependency override — don't close session here; the fixture handles cleanup
+    # Define dependency override — yield a new session each time
     def override_get_db():
-        yield db
+        session = SessionTest()
+        try:
+            yield session
+        finally:
+            session.close()
             
     app.dependency_overrides[get_db] = override_get_db
     
     # Instantiate client
     tc = TestClient(app)
     
-    yield tc, db
+    test_session = SessionTest()
+    yield tc, test_session
+    test_session.close()
     
     # Tear down
     app.dependency_overrides.clear()
@@ -121,12 +128,16 @@ def test_route_escalation(client):
     db.add(esc)
     db.commit()
     
-    # Execute routing post request
-    response = tc.post(f"/api/governance/escalations/{esc.id}/route", json={"routing_target": "Legal Counsel"})
+    # Execute routing post request with Manager role header
+    response = tc.post(
+        f"/api/governance/escalations/{esc.id}/route",
+        json={"routing_target": "Legal Counsel"},
+        headers={"X-User-Role": "Manager"}
+    )
     assert response.status_code == 200
     
     data = response.json()
-    assert data["status"] == "routed"
+    assert data["status"] == "ASSIGNED"
     assert data["routing_target"] == "Legal Counsel"
 
 def test_review_report(client):
@@ -152,14 +163,15 @@ def test_review_report(client):
     db.add(report)
     db.commit()
     
-    # Patch report review status to approved
+    # Patch report review status to approved with Manager role header
     response = tc.patch(
         f"/api/governance/reports/{report.id}/review",
         json={
             "reviewer": "test_reviewer",
             "review_status": "approved",
             "review_notes": "Looks solid, ready to publish."
-        }
+        },
+        headers={"X-User-Role": "Manager"}
     )
     assert response.status_code == 200
     data = response.json()

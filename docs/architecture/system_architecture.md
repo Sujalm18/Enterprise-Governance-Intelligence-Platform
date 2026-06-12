@@ -2,11 +2,11 @@
 
 ## Overview
 
-The platform is a FastAPI + Streamlit governance intelligence system. It ingests enterprise documents, extracts text, classifies document intent, reconstructs governance ontology entities, stores results in SQLite, and presents review workflows in a Streamlit UI.
+The platform is a FastAPI backend with a React (Vite + TypeScript) governance frontend. It ingests enterprise documents, extracts text, classifies document intent, reconstructs governance ontology entities, stores results in SQLite, and presents review workflows in a React UI.
 
 ```mermaid
 flowchart TB
-    U[User] --> UI[Streamlit Frontend]
+    U[User] --> UI[React Frontend]
     UI --> API[FastAPI API]
     API --> WF[Workflow Orchestrator]
     WF --> ING[Ingestion Layer]
@@ -32,7 +32,7 @@ flowchart TB
 | `backend/app/services/ingestion/parser.py` | PDF/DOCX/TXT/XLSX parsing and OCR fallback |
 | `backend/app/services/ai/mock_provider.py` | Governance intelligence extraction in local/mock mode |
 | `backend/app/services/governance/ontology.py` | Shared ontology vocabulary and thresholds |
-| `frontend/` | Streamlit app and review pages |
+| `frontend/` | React + Vite + TypeScript app and review pages |
 | `scripts/regression/run_regression_tests.py` | Corpus evaluation framework |
 
 ## Data Stores
