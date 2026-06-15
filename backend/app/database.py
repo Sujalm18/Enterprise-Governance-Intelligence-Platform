@@ -29,15 +29,34 @@ def get_db():
 
 def init_db():
     """Initializes the database, creates tables, and seeds initial users."""
-    from backend.app.models import User
+    import time
+    from sqlalchemy.exc import OperationalError
     from sqlalchemy import inspect
+    from backend.app.models import User, Organization
     
     logger.info("Initializing database tables...")
     
-    # Check if the database has any tables already
-    inspector = inspect(engine)
-    existing_tables = inspector.get_table_names()
+    # Retry database connection to handle database startup lag (common in multi-container / cloud environments)
+    max_retries = 6
+    retry_interval = 5
+    inspector = None
+    existing_tables = []
     
+    for attempt in range(1, max_retries + 1):
+        try:
+            inspector = inspect(engine)
+            existing_tables = inspector.get_table_names()
+            break
+        except OperationalError as e:
+            if attempt == max_retries:
+                logger.error("Could not connect to database after %s attempts. Exiting.", max_retries)
+                raise e
+            logger.warning(
+                "Database not ready yet. Retrying in %ss... (Attempt %s/%s)",
+                retry_interval, attempt, max_retries
+            )
+            time.sleep(retry_interval)
+            
     if not existing_tables:
         # Completely fresh database -> run migrations directly to create tables and set version
         run_migrations(engine)
@@ -49,10 +68,21 @@ def init_db():
             stamp_migrations(engine)
             
     validate_database_schema(engine)
-
     
     db = SessionLocal()
     try:
+        # Seed default organizations (required to prevent foreign key constraints on seeded users)
+        if db.query(Organization).count() == 0:
+            logger.info("Seeding database with default tenant organizations...")
+            org1 = Organization(id=1, name="Default Tenant")
+            org2 = Organization(id=2, name="Acme Corporation")
+            org3 = Organization(id=3, name="Globex Corporation")
+            db.add(org1)
+            db.add(org2)
+            db.add(org3)
+            db.commit()
+            logger.info("Seed organizations added successfully.")
+            
         # Check if users already exist, if not seed them
         if db.query(User).count() == 0:
             logger.info("Seeding database with default analyst and reviewer roles...")
