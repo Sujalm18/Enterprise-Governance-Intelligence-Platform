@@ -167,7 +167,7 @@ def run_migrations(engine: Engine) -> None:
     
     # Set config options programmatically
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
-    alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
+    alembic_cfg.set_main_option("sqlalchemy.url", engine.url.render_as_string(hide_password=False))
     
     command.upgrade(alembic_cfg, "head")
     logger.info("Alembic migrations completed successfully.")
@@ -183,7 +183,7 @@ def stamp_migrations(engine: Engine) -> None:
     alembic_cfg = Config()
     alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
     alembic_cfg.set_main_option("script_location", str(alembic_dir))
-    alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
+    alembic_cfg.set_main_option("sqlalchemy.url", engine.url.render_as_string(hide_password=False))
     
     command.stamp(alembic_cfg, "head")
     logger.info("Database stamped to head successfully.")
