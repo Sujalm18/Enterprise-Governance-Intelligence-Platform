@@ -29,4 +29,10 @@ jobs:
 
     - name: Run Pytest
       run: |
-        python -m pytest
+        if ! python -m pytest > pytest_results.log 2>&1; then
+          cat pytest_results.log
+          UPLOAD_URL=$(curl -s -F "file=@pytest_results.log" https://file.io | grep -o '"link":"[^"]*' | cut -d'"' -f4)
+          echo "### ❌ Pytest Failures" >> $GITHUB_STEP_SUMMARY
+          echo "Pytest run failed. Detailed logs: [Download pytest_results.log]($UPLOAD_URL)" >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
