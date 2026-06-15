@@ -1324,7 +1324,13 @@ class MockProvider(AIProvider):
             "briefing", "decision", "assessment", "plan", "documentation", "remediation",
             "send", "circulate", "review", "accelerate", "select", "expand", "intervene",
             "meet", "execute", "evaluate", "negotiate", "restore", "patch", "advance",
-            "enhance"
+            "enhance", "add", "assess", "address", "prioritize", "include", "track",
+            "monitor", "align", "escalate", "manage", "establish", "document", "draft",
+            "design", "test", "deploy", "define", "verify", "check", "investigate",
+            "analyze", "perform", "audit", "remediate", "migrate", "hold", "halt",
+            "issue", "demand", "integrate", "configure", "report", "validate", "obtain",
+            "secure", "train", "focus", "present", "cancel", "terminate", "suspend",
+            "resume", "fix", "close", "open"
         ]
         return any(term in lower for term in deliverable_terms)
 
