@@ -1,5 +1,6 @@
 # Enterprise Governance Intelligence Platform
 
+[![CI Pipeline](https://github.com/Sujalm18/Enterprise-Governance-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Sujalm18/Enterprise-Governance-Intelligence-Platform/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.14+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
