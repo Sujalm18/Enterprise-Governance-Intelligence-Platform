@@ -1,166 +1,187 @@
 import json
 import logging
-import math
-import re
 from pathlib import Path
-from typing import List, Dict, Any, Set
+from typing import List, Dict, Any, Optional
+import numpy as np
+import faiss
+
 from backend.app.config import settings
+from backend.app.services.rag.embedder import EmbeddingService
 
 logger = logging.getLogger("governance_copilot.rag.retrieval")
-STORE_FILE = Path(settings.DATABASE_URL.replace("sqlite:///", "")).parent / "rag_store.json"
+
+# Define storage paths using configuration DATA_DIR
+DATA_DIR = Path(settings.UPLOAD_DIR).parent
+FAISS_STORE_FILE = DATA_DIR / "rag_store.faiss"
+METADATA_STORE_FILE = DATA_DIR / "rag_metadata.json"
+EMBEDDING_DIM = 384  # Dimension of all-MiniLM-L6-v2 embeddings
 
 class RetrievalService:
     @staticmethod
-    def _load_store() -> List[Dict[str, Any]]:
-        """Loads chunks from persistent JSON store."""
-        if not STORE_FILE.exists():
+    def _load_metadata() -> List[Dict[str, Any]]:
+        """Loads chunks and their embeddings from the JSON store."""
+        if not METADATA_STORE_FILE.exists():
             return []
         try:
-            with open(STORE_FILE, "r", encoding="utf-8") as f:
+            with open(METADATA_STORE_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"Failed to load RAG store: {e}")
+            logger.error(f"Failed to load RAG metadata: {e}")
             return []
 
     @staticmethod
-    def _save_store(chunks: List[Dict[str, Any]]) -> None:
-        """Saves chunks to persistent JSON store."""
+    def _save_metadata(chunks: List[Dict[str, Any]]) -> None:
+        """Saves chunks and their embeddings to the JSON store."""
         try:
-            STORE_FILE.parent.mkdir(exist_ok=True, parents=True)
-            with open(STORE_FILE, "w", encoding="utf-8") as f:
+            METADATA_STORE_FILE.parent.mkdir(exist_ok=True, parents=True)
+            with open(METADATA_STORE_FILE, "w", encoding="utf-8") as f:
                 json.dump(chunks, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            logger.error(f"Failed to save RAG store: {e}")
+            logger.error(f"Failed to save RAG metadata: {e}")
+
+    @classmethod
+    def _rebuild_faiss_index(cls, all_chunks: List[Dict[str, Any]]) -> None:
+        """Rebuilds the FAISS index from the metadata list and saves it to disk."""
+        if not all_chunks:
+            if FAISS_STORE_FILE.exists():
+                try:
+                    FAISS_STORE_FILE.unlink()
+                except Exception as e:
+                    logger.error(f"Failed to delete FAISS store file: {e}")
+            return
+
+        try:
+            # Gather all embeddings
+            embeddings = [c["embedding"] for c in all_chunks]
+            embeddings_np = np.array(embeddings, dtype=np.float32)
+
+            # L2 normalize for cosine similarity (Inner Product flat index)
+            faiss.normalize_L2(embeddings_np)
+
+            # Create and populate index
+            index = faiss.IndexFlatIP(EMBEDDING_DIM)
+            index.add(embeddings_np)
+
+            # Save to disk
+            faiss.write_index(index, str(FAISS_STORE_FILE))
+            logger.info(f"FAISS index successfully rebuilt with {len(all_chunks)} vectors.")
+        except Exception as e:
+            logger.error(f"Failed to rebuild FAISS index: {e}")
 
     @classmethod
     def add_chunks(cls, new_chunks: List[Dict[str, Any]]) -> None:
-        """Adds new chunks to the TF-IDF search database, replacing older ones for same document."""
+        """
+        Generates sentence embeddings for new chunks, updates the metadata store,
+        and rebuilds the FAISS index.
+        """
         if not new_chunks:
             return
-            
+
         doc_id = new_chunks[0]["metadata"]["document_id"]
         logger.info(f"Indexing {len(new_chunks)} chunks for document ID: {doc_id}")
+
+        # 1. Generate embeddings for the new chunks
+        texts = [c["text"] for c in new_chunks]
+        embeddings = EmbeddingService.get_embeddings_batch(texts)
+
+        # 2. Attach embeddings to chunks
+        for idx, chunk in enumerate(new_chunks):
+            chunk["embedding"] = embeddings[idx]
+
+        # 3. Update metadata store
+        all_chunks = cls._load_metadata()
         
-        all_chunks = cls._load_store()
-        # Remove any existing chunks for this document
+        # Remove any existing chunks for this document to avoid duplicates
         all_chunks = [c for c in all_chunks if c["metadata"]["document_id"] != doc_id]
+        
         # Append new chunks
         all_chunks.extend(new_chunks)
-        cls._save_store(all_chunks)
-        logger.info("RAG store updated successfully.")
+        cls._save_metadata(all_chunks)
+
+        # 4. Rebuild index
+        cls._rebuild_faiss_index(all_chunks)
+        logger.info("RAG vector store and index updated successfully.")
 
     @classmethod
     def delete_chunks(cls, document_id: int) -> None:
-        """Removes chunks for a specific document."""
-        all_chunks = cls._load_store()
-        all_chunks = [c for c in all_chunks if c["metadata"]["document_id"] != document_id]
-        cls._save_store(all_chunks)
-        logger.info(f"Removed chunks for document ID: {document_id}")
-
-    @staticmethod
-    def _tokenize(text: str) -> List[str]:
-        """Simple regex tokenization, lowercased, filtering out short words."""
-        text = text.lower()
-        words = re.findall(r"\b[a-z]{3,}\b", text)
-        return words
+        """Removes chunks and embeddings for a specific document and rebuilds index."""
+        all_chunks = cls._load_metadata()
+        filtered_chunks = [c for c in all_chunks if c["metadata"]["document_id"] != document_id]
+        
+        if len(filtered_chunks) == len(all_chunks):
+            logger.info(f"No chunks found to delete for document ID: {document_id}")
+            return
+            
+        cls._save_metadata(filtered_chunks)
+        cls._rebuild_faiss_index(filtered_chunks)
+        logger.info(f"Removed chunks and updated index for document ID: {document_id}")
 
     @classmethod
-    def retrieve_relevant_context(cls, query: str, document_id: int, top_k: int = 3) -> str:
+    def retrieve_relevant_context(
+        cls, 
+        query: str, 
+        document_id: Optional[int] = None, 
+        top_k: int = 3,
+        score_threshold: float = 0.0
+    ) -> str:
         """
-        Runs TF-IDF and Cosine Similarity search over the document's chunks.
-        Returns a single concatenated text string.
+        Generates query embedding and runs a similarity search.
+        If document_id is specified, constrains the search to that document.
+        Returns concatenated text of the top_k matching chunks.
         """
-        logger.info(f"Retrieving top {top_k} chunks for query: '{query}' in document ID: {document_id}")
-        
-        all_chunks = cls._load_store()
-        # Filter chunks belonging to requested document
-        doc_chunks = [c for c in all_chunks if c["metadata"]["document_id"] == document_id]
-        
-        if not doc_chunks:
-            logger.warning(f"No chunks indexed for document ID: {document_id}")
+        if not query.strip():
             return ""
-            
-        # If there are fewer chunks than top_k, return everything
-        if len(doc_chunks) <= top_k:
-            return "\n\n".join(c["text"] for c in doc_chunks)
-            
-        # Term Frequency (TF) for each chunk
-        chunk_tfs: List[Dict[str, float]] = []
-        chunk_tokens_list: List[List[str]] = []
-        
-        all_terms: Set[str] = set()
-        
-        for c in doc_chunks:
-            tokens = cls._tokenize(c["text"])
-            chunk_tokens_list.append(tokens)
-            
-            tf: Dict[str, float] = {}
-            for t in tokens:
-                tf[t] = tf.get(t, 0.0) + 1.0
-                all_terms.add(t)
-                
-            # Normalize TF
-            total_tokens = len(tokens)
-            if total_tokens > 0:
-                for t in tf:
-                    tf[t] = tf[t] / total_tokens
-            chunk_tfs.append(tf)
-            
-        # Inverse Document Frequency (IDF)
-        num_docs = len(doc_chunks)
-        idf: Dict[str, float] = {}
-        for term in all_terms:
-            docs_with_term = sum(1 for tokens in chunk_tokens_list if term in tokens)
-            # Standard smooth IDF formula
-            idf[term] = math.log((1.0 + num_docs) / (1.0 + docs_with_term)) + 1.0
-            
-        # Query TF-IDF vector
-        query_tokens = cls._tokenize(query)
-        if not query_tokens:
-            # Query is empty or too short, return first chunks
-            return "\n\n".join(c["text"] for c in doc_chunks[:top_k])
-            
-        query_tf: Dict[str, float] = {}
-        for t in query_tokens:
-            query_tf[t] = query_tf.get(t, 0.0) + 1.0
-            
-        query_total = len(query_tokens)
-        for t in query_tf:
-            query_tf[t] = query_tf[t] / query_total
-            
-        query_tfidf: Dict[str, float] = {}
-        for t, tf_val in query_tf.items():
-            if t in idf:
-                query_tfidf[t] = tf_val * idf[t]
-                
-        # Normalize Query Vector length
-        query_norm = math.sqrt(sum(v * v for v in query_tfidf.values()))
-        if query_norm == 0:
-            return "\n\n".join(c["text"] for c in doc_chunks[:top_k])
-            
-        # Calculate Cosine Similarity for each chunk
-        scored_chunks = []
-        for idx, tf_dict in enumerate(chunk_tfs):
-            chunk_tfidf: Dict[str, float] = {}
-            for term, tf_val in tf_dict.items():
-                if term in idf:
-                    chunk_tfidf[term] = tf_val * idf[term]
+
+        # 1. Load metadata
+        all_chunks = cls._load_metadata()
+        if not all_chunks:
+            logger.warning("RAG metadata store is empty.")
+            return ""
+
+        # 2. Filter metadata by document_id if provided
+        if document_id is not None:
+            filtered_chunks = [c for c in all_chunks if c["metadata"]["document_id"] == document_id]
+        else:
+            filtered_chunks = all_chunks
+
+        if not filtered_chunks:
+            logger.warning(f"No chunks available for search (document_id: {document_id}).")
+            return ""
+
+        # If matching chunks are fewer than top_k, return everything
+        if len(filtered_chunks) <= top_k:
+            return "\n\n".join(c["text"] for c in filtered_chunks)
+
+        # 3. Generate query embedding
+        query_embedding = EmbeddingService.get_embedding(query)
+        query_np = np.array([query_embedding], dtype=np.float32)
+        faiss.normalize_L2(query_np)
+
+        # 4. Build temporary FAISS index for filtered subset (extremely fast and guarantees exact match)
+        try:
+            subset_embeddings = [c["embedding"] for c in filtered_chunks]
+            subset_np = np.array(subset_embeddings, dtype=np.float32)
+            faiss.normalize_L2(subset_np)
+
+            temp_index = faiss.IndexFlatIP(EMBEDDING_DIM)
+            temp_index.add(subset_np)
+
+            # Search
+            D, I = temp_index.search(query_np, top_k)
+            scores = D[0]
+            indices = I[0]
+
+            retrieved_texts = []
+            for rank, idx in enumerate(indices):
+                if idx < 0 or idx >= len(filtered_chunks):
+                    continue
+                score = scores[rank]
+                if score >= score_threshold:
+                    retrieved_texts.append(filtered_chunks[idx]["text"])
                     
-            chunk_norm = math.sqrt(sum(v * v for v in chunk_tfidf.values()))
-            if chunk_norm == 0:
-                similarity = 0.0
-            else:
-                # Dot Product
-                dot_product = sum(query_tfidf[t] * chunk_tfidf[t] for t in query_tfidf if t in chunk_tfidf)
-                similarity = dot_product / (query_norm * chunk_norm)
-                
-            scored_chunks.append((similarity, doc_chunks[idx]))
-            
-        # Sort by similarity descending
-        scored_chunks.sort(key=lambda x: x[0], reverse=True)
-        top_chunks = scored_chunks[:top_k]
-        
-        logger.info(f"Retrieved {len(top_chunks)} chunks. Best similarity score: {top_chunks[0][0]:.4f}")
-        
-        # Concat retrieved chunks
-        return "\n\n".join(chunk_data["text"] for _, chunk_data in top_chunks)
+            logger.info(f"Retrieved {len(retrieved_texts)} chunks. Top similarity score: {scores[0]:.4f}")
+            return "\n\n".join(retrieved_texts)
+        except Exception as e:
+            logger.error(f"Error during similarity search: {e}")
+            # Fallback to returning first top_k items
+            return "\n\n".join(c["text"] for c in filtered_chunks[:top_k])

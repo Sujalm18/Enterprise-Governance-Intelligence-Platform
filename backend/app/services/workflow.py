@@ -12,7 +12,7 @@ from backend.app.models import (
 )
 from backend.app.services.ingestion.parser import parse_file
 from backend.app.services.ingestion.cleaner import clean_text
-from backend.app.services.ingestion.chunker import chunk_text
+from backend.app.services.rag.chunker import chunk_document_semantically
 from backend.app.services.rag.retrieval import RetrievalService
 from backend.app.services.ai.ai_service import AIService
 from backend.app.services.governance.playbook import PlaybookEngine
@@ -69,8 +69,7 @@ async def process_document_pipeline(document_id: int, job_id: int) -> None:
         cleaned_text = clean_text(text)
         log_workflow_step(db, job, "Text sanitized and control characters removed.")
         
-        # 4. Deterministic overlapping chunking
-        chunks = chunk_text(
+        chunks = chunk_document_semantically(
             cleaned_text,
             document_id=document.id,
             filename=Path(document.filename).name,

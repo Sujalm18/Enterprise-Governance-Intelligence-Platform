@@ -1158,15 +1158,24 @@ async def get_governance_copilot(
     rca = get_root_cause_analytics_logic(db, tenant_id)
     priorities = get_executive_priorities_logic(db, tenant_id)
     
+    # Retrieve relevant document context via FAISS RAG
+    from backend.app.services.rag.retrieval import RetrievalService
+    rag_context = RetrievalService.retrieve_relevant_context(
+        query=payload.query,
+        document_id=None,
+        top_k=3
+    )
+    
     prio_str = "\n".join([f"- {p['title']} (Count: {p['count']}, Severity: {p['severity']}, Impact: {p['impact']}, Score: {p['priority_score']})" for p in priorities])
     drivers_str = "\n".join([f"- {d['description']} (-{d['impact']} pts)" for d in health_ex["main_drivers"]])
     bonus_str = "\n".join([f"- {b['description']} (+{b['impact']} pts)" for b in health_ex["positive_contributions"]])
     
     system_instruction = (
         f"You are the Governance Intelligence Executive Copilot, an AI assistant built into the Enterprise Governance Intelligence Platform.\n"
-        f"Your task is to answer user queries based on the organization's governance metadata.\n"
+        f"Your task is to answer user queries based on the organization's governance metadata and retrieved document context.\n"
         f"Strictly use the following context. Do not make up any other data.\n"
         f"User Role: {x_user_role}\n"
+        f"Relevant Document Context (RAG):\n{rag_context}\n"
         f"Governance Health Score: {health_ex['health_score']}\n"
         f"Governance Maturity Score: {maturity['score']} ({maturity['tier']})\n"
         f"Maturity Dimensions:\n"

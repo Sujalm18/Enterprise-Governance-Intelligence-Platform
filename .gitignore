@@ -19,6 +19,8 @@ data/uploads/
 data/logs/
 data/*.db
 data/rag_store.json
+data/rag_store.faiss
+data/rag_metadata.json
 
 # Node / frontend
 node_modules/
