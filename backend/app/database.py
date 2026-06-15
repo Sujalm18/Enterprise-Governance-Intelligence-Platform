@@ -67,6 +67,8 @@ def init_db():
             from backend.app.migrations import stamp_migrations
             stamp_migrations(engine)
             
+    from backend.app.migrations import auto_repair_schema
+    auto_repair_schema(engine)
     validate_database_schema(engine)
     
     db = SessionLocal()

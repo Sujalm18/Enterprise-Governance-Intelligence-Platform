@@ -189,10 +189,31 @@ def stamp_migrations(engine: Engine) -> None:
     logger.info("Database stamped to head successfully.")
 
 
+def auto_repair_schema(engine: Engine) -> None:
+    """Automatically add missing columns to existing tables."""
+    logger.info("Checking and repairing database schema automatically...")
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    is_pg = _is_postgres(engine)
+
+    with engine.begin() as conn:
+        # Add workflow columns defined in WORKFLOW_TABLES_COLUMNS
+        for table_name, columns in WORKFLOW_TABLES_COLUMNS.items():
+            if table_name in table_names:
+                for column_name, column_type in columns.items():
+                    _add_column_if_missing(conn, inspector, table_name, column_name, column_type, is_pg)
+
+        # Add governance report required columns if missing
+        if "governance_reports" in table_names:
+            for column_name, column_type in GOVERNANCE_REPORT_REQUIRED_COLUMNS.items():
+                _add_column_if_missing(conn, inspector, "governance_reports", column_name, column_type, is_pg)
+
+
 # Legacy alias for backward compatibility
 def run_sqlite_migrations(engine: Engine) -> None:
     """Legacy wrapper — delegates to the dialect-aware run_migrations."""
     run_migrations(engine)
+
 
 
 
