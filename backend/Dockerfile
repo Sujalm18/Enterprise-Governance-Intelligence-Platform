@@ -46,6 +46,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /app/backend
+RUN if [ -d /app/backend/backend ]; then \
+        mv /app/backend/backend/* /app/backend/ && \
+        rm -rf /app/backend/backend; \
+    fi
 
 RUN mkdir -p /app/data/uploads
 
