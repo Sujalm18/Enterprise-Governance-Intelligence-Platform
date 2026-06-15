@@ -173,11 +173,27 @@ def run_migrations(engine: Engine) -> None:
     logger.info("Alembic migrations completed successfully.")
 
 
+def stamp_migrations(engine: Engine) -> None:
+    """Stamp the database schema to the latest Alembic revision."""
+    logger.info("Stamping database schema version to head...")
+    from alembic.config import Config
+    from alembic import command
+    from pathlib import Path
+    
+    alembic_cfg = Config()
+    alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
+    alembic_cfg.set_main_option("script_location", str(alembic_dir))
+    alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
+    
+    command.stamp(alembic_cfg, "head")
+    logger.info("Database stamped to head successfully.")
+
 
 # Legacy alias for backward compatibility
 def run_sqlite_migrations(engine: Engine) -> None:
     """Legacy wrapper — delegates to the dialect-aware run_migrations."""
     run_migrations(engine)
+
 
 
 def validate_database_schema(engine: Engine) -> None:

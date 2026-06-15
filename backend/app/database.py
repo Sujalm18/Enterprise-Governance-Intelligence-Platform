@@ -30,11 +30,26 @@ def get_db():
 def init_db():
     """Initializes the database, creates tables, and seeds initial users."""
     from backend.app.models import User
+    from sqlalchemy import inspect
     
     logger.info("Initializing database tables...")
-    Base.metadata.create_all(bind=engine)
-    run_migrations(engine)
+    
+    # Check if the database has any tables already
+    inspector = inspect(engine)
+    existing_tables = inspector.get_table_names()
+    
+    if not existing_tables:
+        # Completely fresh database -> run migrations directly to create tables and set version
+        run_migrations(engine)
+    else:
+        # Tables exist (either pre-existing database or created via test harness setup)
+        Base.metadata.create_all(bind=engine)
+        if "alembic_version" not in existing_tables:
+            from backend.app.migrations import stamp_migrations
+            stamp_migrations(engine)
+            
     validate_database_schema(engine)
+
     
     db = SessionLocal()
     try:
