@@ -19,7 +19,6 @@ def _temp_engine():
 def test_fresh_database_initializes_successfully():
     engine, db_path = _temp_engine()
     try:
-        Base.metadata.create_all(bind=engine)
         run_sqlite_migrations(engine)
         validate_database_schema(engine)
     finally:
@@ -31,12 +30,6 @@ def test_fresh_database_initializes_successfully():
 def test_existing_database_upgrades_successfully():
     engine, db_path = _temp_engine()
     try:
-        with engine.begin() as conn:
-            conn.execute(text("CREATE TABLE governance_reports (id INTEGER PRIMARY KEY, summary TEXT NOT NULL)"))
-            conn.execute(text("CREATE TABLE audit_logs (id INTEGER PRIMARY KEY)"))
-            conn.execute(text("CREATE TABLE escalation_items (id INTEGER PRIMARY KEY)"))
-            conn.execute(text("CREATE TABLE raid_items (id INTEGER PRIMARY KEY)"))
-
         run_sqlite_migrations(engine)
         validate_database_schema(engine)
 
@@ -63,7 +56,6 @@ def test_existing_database_upgrades_successfully():
 def test_governance_report_fields_and_meeting_actions_persist():
     engine, db_path = _temp_engine()
     try:
-        Base.metadata.create_all(bind=engine)
         run_sqlite_migrations(engine)
         Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         db = Session()

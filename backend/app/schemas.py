@@ -79,6 +79,16 @@ class UserResponse(BaseSchema):
     username: str
     role: str
 
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    role: str
+    tenant_id: int
+
 # Document Schemas
 class DocumentResponse(BaseSchema):
     id: int

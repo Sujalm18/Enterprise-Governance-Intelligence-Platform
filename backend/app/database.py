@@ -41,8 +41,17 @@ def init_db():
         # Check if users already exist, if not seed them
         if db.query(User).count() == 0:
             logger.info("Seeding database with default analyst and reviewer roles...")
-            analyst = User(username="analyst_user", role="analyst")
-            reviewer = User(username="reviewer_user", role="reviewer")
+            from backend.app.auth import get_password_hash
+            analyst = User(
+                username="analyst_user",
+                role="analyst",
+                password_hash=get_password_hash("analyst123")
+            )
+            reviewer = User(
+                username="reviewer_user",
+                role="reviewer",
+                password_hash=get_password_hash("reviewer123")
+            )
             db.add(analyst)
             db.add(reviewer)
             db.commit()

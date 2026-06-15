@@ -27,7 +27,7 @@ from backend.app.schemas import (
     GovernanceMaturityResponse, ExecutivePriorityItem, RootCauseAnalyticsResponse,
     StrategicRecommendationsResponse, ExecutiveBriefingResponse, CopilotRequest,
     CopilotResponse, GovernanceTrendsResponse, HealthExplanationsResponse,
-    HealthExplanationItem
+    HealthExplanationItem, LoginRequest, TokenResponse
 )
 from backend.app.services.workflow import process_document_pipeline
 
@@ -35,17 +35,46 @@ logger = logging.getLogger("governance_copilot.api.endpoints")
 router = APIRouter()
 
 
-def get_current_role(x_user_role: str = Header("Analyst", alias="X-User-Role")):
-    """Lightweight role validation helper."""
-    # Ensure role is capitalized to match Analyst, Manager, Governance Lead
-    return x_user_role.title() if x_user_role else "Analyst"
+from backend.app.auth import (
+    get_current_role,
+    get_current_tenant,
+    verify_password,
+    create_access_token,
+    get_current_user_optional
+)
 
 
-def get_current_tenant(x_tenant_id: str = Header("1", alias="X-Tenant-ID")) -> int:
-    try:
-        return int(x_tenant_id)
-    except (ValueError, TypeError):
-        return 1
+@router.post("/auth/login", response_model=TokenResponse)
+def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == login_data.username).first()
+    if not user or not user.password_hash or not verify_password(login_data.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": user.username})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "role": user.role,
+        "tenant_id": user.tenant_id or 1
+    }
+
+
+@router.get("/auth/me")
+def get_me(current_user: Optional[User] = Depends(get_current_user_optional)):
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "role": current_user.role,
+        "tenant_id": current_user.tenant_id or 1
+    }
 
 
 

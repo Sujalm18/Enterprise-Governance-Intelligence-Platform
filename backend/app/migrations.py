@@ -20,6 +20,7 @@ WORKFLOW_TABLES_COLUMNS = {
     },
     "users": {
         "tenant_id": "INTEGER DEFAULT 1",
+        "password_hash": "VARCHAR",
     },
     "documents": {
         "tenant_id": "INTEGER DEFAULT 1",
@@ -152,238 +153,22 @@ def _add_column_if_missing(conn, inspector, table_name: str, column_name: str, c
 
 
 def run_migrations(engine: Engine) -> None:
-    """Apply idempotent database migrations for both SQLite and PostgreSQL."""
-    dialect = engine.dialect.name
-    is_pg = _is_postgres(engine)
-    dt = _datetime_type(engine)
-    bool_false = _bool_default_false(engine)
-
-    logger.info("Running database migrations for dialect: %s", dialect)
-
-    inspector = inspect(engine)
-    table_names = set(inspector.get_table_names())
-
-    with engine.begin() as conn:
-        # ──────────────────────────────────────────────
-        # 1. Ensure organizations table exists
-        # ──────────────────────────────────────────────
-        logger.info("Ensuring organizations table exists")
-        if is_pg:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS organizations (
-                    id SERIAL PRIMARY KEY,
-                    name VARCHAR NOT NULL UNIQUE,
-                    created_at {dt} NOT NULL,
-                    slack_webhook_url VARCHAR,
-                    teams_webhook_url VARCHAR
-                )
-            """))
-        else:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS organizations (
-                    id INTEGER NOT NULL,
-                    name VARCHAR NOT NULL UNIQUE,
-                    created_at {dt} NOT NULL,
-                    slack_webhook_url VARCHAR,
-                    teams_webhook_url VARCHAR,
-                    PRIMARY KEY (id)
-                )
-            """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_organizations_id ON organizations (id)"))
-
-        # Seed default tenants
-        conn.execute(text(_insert_ignore_organizations(engine)))
-
-        # Refresh inspector after table creation
-        inspector = inspect(engine)
-        table_names = set(inspector.get_table_names())
-
-        # ──────────────────────────────────────────────
-        # 2. Migrate governance_reports columns
-        # ──────────────────────────────────────────────
-        if "governance_reports" in table_names:
-            for column_name, column_type in GOVERNANCE_REPORT_REQUIRED_COLUMNS.items():
-                _add_column_if_missing(conn, inspector, "governance_reports", column_name, column_type, is_pg)
-
-        # ──────────────────────────────────────────────
-        # 3. Apply workflow columns across all tables
-        # ──────────────────────────────────────────────
-        for table_name, columns in WORKFLOW_TABLES_COLUMNS.items():
-            if table_name in table_names:
-                for column_name, column_type in columns.items():
-                    _add_column_if_missing(conn, inspector, table_name, column_name, column_type, is_pg)
-
-        # ──────────────────────────────────────────────
-        # 4. Ensure meeting_actions table exists
-        # ──────────────────────────────────────────────
-        logger.info("Ensuring meeting_actions table exists")
-        if is_pg:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS meeting_actions (
-                    id SERIAL PRIMARY KEY,
-                    report_id INTEGER NOT NULL REFERENCES governance_reports (id) ON DELETE CASCADE,
-                    owner VARCHAR NOT NULL,
-                    task TEXT NOT NULL,
-                    due_date VARCHAR,
-                    created_at {dt} NOT NULL,
-                    tenant_id INTEGER DEFAULT 1
-                )
-            """))
-        else:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS meeting_actions (
-                    id INTEGER NOT NULL,
-                    report_id INTEGER NOT NULL,
-                    owner VARCHAR NOT NULL,
-                    task TEXT NOT NULL,
-                    due_date VARCHAR,
-                    created_at {dt} NOT NULL,
-                    tenant_id INTEGER DEFAULT 1,
-                    PRIMARY KEY (id),
-                    FOREIGN KEY(report_id) REFERENCES governance_reports (id) ON DELETE CASCADE
-                )
-            """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_meeting_actions_id ON meeting_actions (id)"))
-
-        # ──────────────────────────────────────────────
-        # 5. Ensure mitigation_tasks table exists
-        # ──────────────────────────────────────────────
-        logger.info("Ensuring mitigation_tasks table exists")
-        if is_pg:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS mitigation_tasks (
-                    id SERIAL PRIMARY KEY,
-                    title VARCHAR NOT NULL,
-                    description TEXT,
-                    related_raid_item_id INTEGER NOT NULL REFERENCES raid_items (id) ON DELETE CASCADE,
-                    related_escalation_id INTEGER REFERENCES escalation_items (id) ON DELETE SET NULL,
-                    owner_role VARCHAR NOT NULL,
-                    owner_name VARCHAR,
-                    priority VARCHAR NOT NULL,
-                    risk_score INTEGER NOT NULL,
-                    target_date VARCHAR,
-                    sla_status VARCHAR NOT NULL DEFAULT 'ON_TRACK',
-                    status VARCHAR NOT NULL DEFAULT 'PLANNED',
-                    completion_percentage INTEGER NOT NULL DEFAULT 0,
-                    effectiveness INTEGER NOT NULL DEFAULT 20,
-                    created_at {dt} NOT NULL,
-                    updated_at {dt} NOT NULL,
-                    completed_at {dt},
-                    verified_at {dt},
-                    tenant_id INTEGER DEFAULT 1
-                )
-            """))
-        else:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS mitigation_tasks (
-                    id INTEGER NOT NULL,
-                    title VARCHAR NOT NULL,
-                    description TEXT,
-                    related_raid_item_id INTEGER NOT NULL,
-                    related_escalation_id INTEGER,
-                    owner_role VARCHAR NOT NULL,
-                    owner_name VARCHAR,
-                    priority VARCHAR NOT NULL,
-                    risk_score INTEGER NOT NULL,
-                    target_date VARCHAR,
-                    sla_status VARCHAR NOT NULL DEFAULT 'ON_TRACK',
-                    status VARCHAR NOT NULL DEFAULT 'PLANNED',
-                    completion_percentage INTEGER NOT NULL DEFAULT 0,
-                    effectiveness INTEGER NOT NULL DEFAULT 20,
-                    created_at {dt} NOT NULL,
-                    updated_at {dt} NOT NULL,
-                    completed_at {dt},
-                    verified_at {dt},
-                    tenant_id INTEGER DEFAULT 1,
-                    PRIMARY KEY (id),
-                    FOREIGN KEY(related_raid_item_id) REFERENCES raid_items (id) ON DELETE CASCADE,
-                    FOREIGN KEY(related_escalation_id) REFERENCES escalation_items (id) ON DELETE SET NULL
-                )
-            """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_mitigation_tasks_id ON mitigation_tasks (id)"))
-
-        # ──────────────────────────────────────────────
-        # 6. Ensure notifications table exists
-        # ──────────────────────────────────────────────
-        logger.info("Ensuring notifications table exists")
-        if is_pg:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS notifications (
-                    id SERIAL PRIMARY KEY,
-                    severity VARCHAR NOT NULL,
-                    notification_type VARCHAR NOT NULL,
-                    title VARCHAR NOT NULL,
-                    message TEXT NOT NULL,
-                    recipient_role VARCHAR NOT NULL,
-                    related_entity_type VARCHAR,
-                    related_entity_id INTEGER,
-                    read_status {bool_false},
-                    created_at {dt} NOT NULL,
-                    tenant_id INTEGER DEFAULT 1
-                )
-            """))
-        else:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS notifications (
-                    id INTEGER NOT NULL,
-                    severity VARCHAR NOT NULL,
-                    notification_type VARCHAR NOT NULL,
-                    title VARCHAR NOT NULL,
-                    message TEXT NOT NULL,
-                    recipient_role VARCHAR NOT NULL,
-                    related_entity_type VARCHAR,
-                    related_entity_id INTEGER,
-                    read_status BOOLEAN NOT NULL DEFAULT 0,
-                    created_at {dt} NOT NULL,
-                    tenant_id INTEGER DEFAULT 1,
-                    PRIMARY KEY (id)
-                )
-            """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notifications_id ON notifications (id)"))
-
-        # ──────────────────────────────────────────────
-        # 7. Ensure governance_trend_snapshots table exists
-        # ──────────────────────────────────────────────
-        logger.info("Ensuring governance_trend_snapshots table exists")
-        if is_pg:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS governance_trend_snapshots (
-                    id SERIAL PRIMARY KEY,
-                    timestamp {dt} NOT NULL,
-                    health_score INTEGER NOT NULL,
-                    maturity_score INTEGER NOT NULL,
-                    risk_exposure INTEGER NOT NULL,
-                    mitigation_effectiveness_pct FLOAT NOT NULL,
-                    sla_breaches INTEGER NOT NULL,
-                    open_escalations INTEGER NOT NULL,
-                    verified_mitigations INTEGER NOT NULL,
-                    critical_risks INTEGER NOT NULL,
-                    notification_volume INTEGER NOT NULL,
-                    tenant_id INTEGER DEFAULT 1
-                )
-            """))
-        else:
-            conn.execute(text(f"""
-                CREATE TABLE IF NOT EXISTS governance_trend_snapshots (
-                    id INTEGER NOT NULL,
-                    timestamp {dt} NOT NULL,
-                    health_score INTEGER NOT NULL,
-                    maturity_score INTEGER NOT NULL,
-                    risk_exposure INTEGER NOT NULL,
-                    mitigation_effectiveness_pct FLOAT NOT NULL,
-                    sla_breaches INTEGER NOT NULL,
-                    open_escalations INTEGER NOT NULL,
-                    verified_mitigations INTEGER NOT NULL,
-                    critical_risks INTEGER NOT NULL,
-                    notification_volume INTEGER NOT NULL,
-                    tenant_id INTEGER DEFAULT 1,
-                    PRIMARY KEY (id)
-                )
-            """))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_governance_trend_snapshots_id ON governance_trend_snapshots (id)"))
-        conn.execute(text("CREATE INDEX IF NOT EXISTS ix_governance_trend_snapshots_timestamp ON governance_trend_snapshots (timestamp)"))
-
-    logger.info("Database migrations completed successfully for dialect: %s", dialect)
+    """Apply database migrations programmatically via Alembic."""
+    logger.info("Running database migrations programmatically via Alembic...")
+    from alembic.config import Config
+    from alembic import command
+    from pathlib import Path
+    
+    # Locate alembic.ini from project root relative to this file
+    base_dir = Path(__file__).resolve().parent.parent.parent
+    ini_path = str(base_dir / "alembic.ini")
+    
+    alembic_cfg = Config(ini_path)
+    # Dynamically inject the active database connection URL
+    alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
+    
+    command.upgrade(alembic_cfg, "head")
+    logger.info("Alembic migrations completed successfully.")
 
 
 # Legacy alias for backward compatibility
