@@ -12,6 +12,24 @@ The **Enterprise Governance Intelligence Platform** is a portfolio-grade executi
 
 ---
 
+## About the Project & Engineering Motivation
+
+> [!NOTE]
+> **Built by Sujal Mandape**
+> 
+> As organizations scale, project governance documents like steering committee decks, status memos, and RAID registers quickly accumulate into unstructured silos. I built the **Enterprise Governance Intelligence Platform** to tackle this issue directly—automating the ingestion of multi-format documents and parsing them into structured, ontologically validated assets that drive decision-support systems.
+> 
+> Throughout this project, I prioritized production-grade engineering principles:
+> 
+> - **FAISS Vector Store & Semantic Retrieval:** Built a custom RAG (Retrieval-Augmented Generation) pipeline using `sentence-transformers` and a local FAISS index, grounding the AI Copilot to answer queries with precise, document-referenced context instead of model hallucinations.
+> - **Multi-Tenancy & Security:** Implemented strict tenant isolation via custom FastAPI dependencies and database context filters mapping tenant parameters.
+> - **PostgreSQL Schema & Database Migrations:** Designed a multi-stage Docker environment coupled with programmatically invoked Alembic migrations to handle continuous schema updates and support local SQLite and production PostgreSQL environments.
+> - **Evaluation Corpus & Metric Suite:** Established a regression test suite against realistic, annotated governance documents to track Precision, Recall, and F1 metrics for metadata and entity extraction.
+> 
+> My goal was to move past basic LLM wrapper setups and build a robust, observable data pipeline suitable for modern enterprise environments.
+
+---
+
 ## 1. Core Capabilities
 
 - **Governance Workflows**: Automates mixed-format ingestion (PDF, DOCX, TXT, XLSX, scanned PDF with OCR fallback), classifies report intent, and manages draft statuses (Draft, Manager Review, Approval, Changes Requested).
