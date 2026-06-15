@@ -159,16 +159,19 @@ def run_migrations(engine: Engine) -> None:
     from alembic import command
     from pathlib import Path
     
-    # Locate alembic.ini from project root relative to this file
-    base_dir = Path(__file__).resolve().parent.parent.parent
-    ini_path = str(base_dir / "alembic.ini")
+    # Instantiate Alembic Config programmatically without an ini file
+    alembic_cfg = Config()
     
-    alembic_cfg = Config(ini_path)
-    # Dynamically inject the active database connection URL
+    # Locate alembic directory relative to this file
+    alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
+    
+    # Set config options programmatically
+    alembic_cfg.set_main_option("script_location", str(alembic_dir))
     alembic_cfg.set_main_option("sqlalchemy.url", str(engine.url))
     
     command.upgrade(alembic_cfg, "head")
     logger.info("Alembic migrations completed successfully.")
+
 
 
 # Legacy alias for backward compatibility
