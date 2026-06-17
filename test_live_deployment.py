@@ -26,7 +26,7 @@ def run_diagnostics(base_url):
 
     # 2. Test User Login Authentication
     print("\n[2/3] Testing Login Authentication with Default Seed User...")
-    login_url = f"{base_url.rstrip('/')}/auth/login"
+    login_url = f"{base_url.rstrip('/')}/api/auth/login"
     login_payload = {
         "username": "analyst_user",
         "password": "analyst123"
@@ -53,7 +53,7 @@ def run_diagnostics(base_url):
     if token:
         print("\n[3/3] Testing Authenticated API Access...")
         headers = {"Authorization": f"Bearer {token}"}
-        me_url = f"{base_url.rstrip('/')}/auth/me"
+        me_url = f"{base_url.rstrip('/')}/api/auth/me"
         try:
             res = requests.get(me_url, headers=headers, timeout=10)
             if res.status_code == 200:
