@@ -46,3 +46,13 @@ We introduced all the documentation expected in a mature enterprise repository:
 ## 4. Git Release Packaging
 - **Git Tag**: Created tag `v1.0.0-rc1` with description `"Enterprise Governance Intelligence Platform - Release Candidate 1"`.
 - **Handoff Target**: Branch `main` remains the frozen Phase 1-6 stable baseline. All future development (Auth, RBAC, SSO, PostgreSQL, Docker, CI/CD, APM monitoring) will merge into `phase7-production-readiness`.
+
+---
+
+## 5. Live Production Deployment Fixes & Diagnostics
+We resolved the database startup crash on Railway:
+- **Programmatic Alembic configuration**: Programmatic Alembic config was introduced to bypass the missing `alembic.ini` file in the Docker container.
+- **Dialect-Safe DB Initialization**: Created `init_db()` connection retry loop, dialect-safe migrations, and organization seeding.
+- **SQLAlchemy URL Obfuscation Fix**: Replaced `str(engine.url)` with `engine.url.render_as_string(hide_password=False)` to prevent masking DB credentials.
+- **Self-Healing Schema Auto-Repair**: Added `auto_repair_schema()` to dynamically append missing columns (such as `users.password_hash`) to pre-existing tables on startup to resolve schema out-of-sync failures with persistent DB volumes.
+- **Diagnostic Tooling**: Added a diagnostic script [test_live_deployment.py](file:///c:/Users/10651.PHNTECHNOLOGY/Desktop/Projects/Enterprise%20AI/test_live_deployment.py) to automatically test endpoints in production. We fixed the paths to hit the `/api/auth/` prefix.
