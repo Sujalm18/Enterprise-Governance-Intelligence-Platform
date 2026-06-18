@@ -1,7 +1,7 @@
 # Enterprise Governance Intelligence Platform
 
 [![CI Pipeline](https://github.com/Sujalm18/Enterprise-Governance-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Sujalm18/Enterprise-Governance-Intelligence-Platform/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.14+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -66,7 +66,7 @@ flowchart TD
 ## 3. Local Setup & Quick Start
 
 ### Prerequisites
-- **Python**: 3.14+
+- **Python**: 3.11+
 - **Node.js**: 20+
 
 ### Step 1: Clone and Set Up the Backend
@@ -105,7 +105,7 @@ The UI dashboard is available at `http://localhost:5173/`.
 
 ## 4. Showcase Screenshots
 
-Reference mock screenshots mapping key dashboard views:
+Key dashboard views from the live deployment:
 - **Operations Dashboard**: [docs/screenshots/dashboard.png](docs/screenshots/dashboard.png)
 - **Executive Hub Command Center**: [docs/screenshots/executive-hub.png](docs/screenshots/executive-hub.png)
 - **Mitigation Tasks Lifecycle**: [docs/screenshots/mitigations.png](docs/screenshots/mitigations.png)
@@ -114,3 +114,21 @@ Reference mock screenshots mapping key dashboard views:
 - **Escalation Disputes Queue**: [docs/screenshots/escalations.png](docs/screenshots/escalations.png)
 - **Printable Board Pack PDF**: [docs/screenshots/board-pack.png](docs/screenshots/board-pack.png)
 - **Pipeline Architecture Info**: [docs/screenshots/architecture.png](docs/screenshots/architecture.png)
+
+---
+
+## 5. Live Deployment
+
+The backend is deployed on **Railway** (PostgreSQL + FastAPI). Healthcheck endpoint: `/health`.
+
+To verify a live deployment is functional, run the included diagnostic script:
+```bash
+python test_live_deployment.py
+# Enter your Railway URL when prompted
+```
+
+Seed credentials for testing:
+| Username | Password | Role |
+|---|---|---|
+| `analyst_user` | `analyst123` | Analyst |
+| `reviewer_user` | `reviewer123` | Reviewer |
