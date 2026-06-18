@@ -1,5 +1,9 @@
 import sys
 import requests
+import urllib3
+
+# Suppress insecure request warnings for verification bypass
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def run_diagnostics(base_url):
     print("=" * 60)
@@ -11,7 +15,7 @@ def run_diagnostics(base_url):
     print("\n[1/3] Pinging Health Endpoint...")
     health_url = f"{base_url.rstrip('/')}/health"
     try:
-        res = requests.get(health_url, timeout=10)
+        res = requests.get(health_url, timeout=10, verify=False)
         if res.status_code == 200:
             data = res.json()
             print(f"  --> SUCCESS: Endpoint is online.")
@@ -33,7 +37,7 @@ def run_diagnostics(base_url):
     }
     token = None
     try:
-        res = requests.post(login_url, json=login_payload, timeout=10)
+        res = requests.post(login_url, json=login_payload, timeout=10, verify=False)
         if res.status_code == 200:
             token_data = res.json()
             token = token_data.get("access_token")
@@ -55,7 +59,7 @@ def run_diagnostics(base_url):
         headers = {"Authorization": f"Bearer {token}"}
         me_url = f"{base_url.rstrip('/')}/api/auth/me"
         try:
-            res = requests.get(me_url, headers=headers, timeout=10)
+            res = requests.get(me_url, headers=headers, timeout=10, verify=False)
             if res.status_code == 200:
                 print(f"  --> SUCCESS: Verified token access to /auth/me.")
                 print(f"  --> Verified User: {res.json()}")

@@ -52,5 +52,4 @@ def health_check():
         "provider": settings.AI_PROVIDER,
         "mock_mode_active": settings.USE_MOCK_MODE,
         "database_dialect": settings.DATABASE_URL.split(":", 1)[0],
-        "version": "test_seed_repair_v2",
     }
