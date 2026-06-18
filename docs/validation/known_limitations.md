@@ -21,6 +21,9 @@ This document is intentionally candid. The platform is strong enough for portfol
 - Manual PMO validation is still required.
 - Meeting action recall now reflects conservative action legitimacy, which may underperform old high-recall thresholds.
 
+**Regression suite measures threshold-clearing, not extraction accuracy.**
+The .expected.json thresholds (e.g. raid_items_min) are coarse per-category minimums, not content-matched ground truth. A manual check against raid_register_10.txt found 17 actual RAID items against a threshold of 5 - meaning extraction could miss the majority of real items in a document and still pass. The current 100% pass rate (see regression_test_report.md) reflects these coarse thresholds, not verified per-item extraction quality. Per-item ground truth evaluation against manually annotated documents is a planned improvement, not yet implemented.
+
 ## Summarization
 
 - Mock-mode executive summaries are template-driven and not full narrative synthesis.
