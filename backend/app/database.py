@@ -85,24 +85,37 @@ def init_db():
             db.commit()
             logger.info("Seed organizations added successfully.")
             
-        # Check if users already exist, if not seed them
-        if db.query(User).count() == 0:
-            logger.info("Seeding database with default analyst and reviewer roles...")
-            from backend.app.auth import get_password_hash
+        # Check if users already exist, if not seed them, or repair missing password hashes
+        from backend.app.auth import get_password_hash
+        
+        analyst = db.query(User).filter(User.username == "analyst_user").first()
+        if not analyst:
+            logger.info("Seeding default analyst user...")
             analyst = User(
                 username="analyst_user",
                 role="analyst",
                 password_hash=get_password_hash("analyst123")
             )
+            db.add(analyst)
+        elif not analyst.password_hash:
+            logger.info("Repairing default analyst user password hash...")
+            analyst.password_hash = get_password_hash("analyst123")
+            
+        reviewer = db.query(User).filter(User.username == "reviewer_user").first()
+        if not reviewer:
+            logger.info("Seeding default reviewer user...")
             reviewer = User(
                 username="reviewer_user",
                 role="reviewer",
                 password_hash=get_password_hash("reviewer123")
             )
-            db.add(analyst)
             db.add(reviewer)
-            db.commit()
-            logger.info("Seed users added successfully.")
+        elif not reviewer.password_hash:
+            logger.info("Repairing default reviewer user password hash...")
+            reviewer.password_hash = get_password_hash("reviewer123")
+            
+        db.commit()
+        logger.info("Seed users check and repair completed successfully.")
     except Exception as e:
         logger.error(f"Error seeding database: {e}")
         db.rollback()
