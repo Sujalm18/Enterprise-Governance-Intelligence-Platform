@@ -24,7 +24,7 @@ The **Enterprise Governance Intelligence Platform** is a portfolio-grade executi
 > - **FAISS Vector Store & Semantic Retrieval:** Built a custom RAG (Retrieval-Augmented Generation) pipeline using `sentence-transformers` and a local FAISS index, grounding the AI Copilot to answer queries with precise, document-referenced context instead of model hallucinations.
 > - **Multi-Tenancy & Security:** Implemented strict tenant isolation via custom FastAPI dependencies and database context filters mapping tenant parameters.
 > - **PostgreSQL Schema & Database Migrations:** Designed a multi-stage Docker environment coupled with programmatically invoked Alembic migrations to handle continuous schema updates and support local SQLite and production PostgreSQL environments.
-> - **Evaluation Corpus & Metric Suite:** Established a regression test suite against realistic, annotated governance documents to track Precision, Recall, and F1 metrics for metadata and entity extraction.
+> - **Evaluation Corpus & Metric Suite:** Built a 90-document regression smoke-test suite that validates document classification and catches pipeline-breaking regressions (crashes, empty extraction, misclassification) across document formats and types.
 > 
 > My goal was to move past basic LLM wrapper setups and build a robust, observable data pipeline suitable for modern enterprise environments.
 
@@ -120,6 +120,9 @@ Key dashboard views from the live deployment:
 ## 5. Live Deployment
 
 The backend is deployed on **Railway** (PostgreSQL + FastAPI). Healthcheck endpoint: `/health`.
+
+> [!NOTE]
+> **Production Mock Mode:** To control Anthropic API costs for the public portfolio showcase, the live Railway deployment runs in **Mock Mode** by default (with a high-fidelity rule-based heuristic parser serving as the provider). Full Anthropic Claude LLM extraction and AI Copilot responses are fully supported and can be run locally by setting the `ANTHROPIC_API_KEY` environment variable.
 
 To verify a live deployment is functional, run the included diagnostic script:
 ```bash
